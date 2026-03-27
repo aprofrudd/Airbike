@@ -1,0 +1,2419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Assault Fitness BLE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #090A3D; color: #FFFFFF; padding: 12px; max-width: 480px; margin: 0 auto;
+    -webkit-text-size-adjust: 100%;
+  }
+  h1 { font-family: 'Chakra Petch', sans-serif; font-size: 1.3rem; text-align: center; padding: 8px 0 4px; text-transform: uppercase; letter-spacing: 1px; }
+  h1 span { color: #33CBF4; }
+
+  .section { background: #07083D; border-radius: 10px; padding: 14px; margin: 10px 0; }
+  .section-title { font-family: 'Chakra Petch', sans-serif; font-size: 0.8rem; text-transform: uppercase; color: #2074AA; margin-bottom: 8px; letter-spacing: 1px; }
+
+  label { font-size: 0.85rem; color: #7BA4C7; }
+  select, input[type="number"] {
+    background: #0C0D48; color: #FFFFFF; border: 1px solid #2D5585; border-radius: 6px;
+    padding: 10px; font-size: 1rem; width: 100%;
+  }
+  select { margin-top: 4px; }
+  input[type="number"] { width: 80px; text-align: center; }
+
+  .btn {
+    display: inline-block; padding: 14px 20px; border: none; border-radius: 8px;
+    font-family: 'Chakra Petch', sans-serif; font-size: 1rem; font-weight: 600;
+    cursor: pointer; min-height: 48px; text-transform: uppercase; letter-spacing: 0.5px;
+    transition: opacity 0.15s;
+  }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-connect { background: #33CBF4; color: #fff; width: 100%; }
+  .btn-disconnect { background: #2D5585; color: #fff; width: 100%; margin-top: 8px; }
+  .btn-record { background: #33CBF4; color: #fff; width: 100%; }
+  .btn-download { background: #2074AA; color: #fff; width: 100%; }
+
+  .status { font-size: 0.85rem; margin-top: 8px; min-height: 1.2em; }
+  .status.error { color: #EF4444; }
+  .status.warning { color: #F59E0B; }
+  .status.success { color: #22C55E; }
+  .status.recording { color: #EF4444; }
+  .status.info { color: #7BA4C7; }
+
+  .data-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  }
+  .data-cell {
+    background: #0C0D48; border-radius: 6px; padding: 10px;
+  }
+  .data-label { font-family: 'Chakra Petch', sans-serif; font-size: 0.7rem; color: #2074AA; text-transform: uppercase; letter-spacing: 0.5px; }
+  .data-value {
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 1.3rem; font-weight: 700; margin-top: 2px;
+  }
+  .data-unit { font-size: 0.7rem; color: #2D5585; font-weight: 400; }
+
+  .recording-row {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+  }
+  .recording-row label { white-space: nowrap; }
+  .countdown {
+    font-family: monospace; font-size: 1.6rem; font-weight: 700;
+    text-align: center; margin: 10px 0; min-height: 2rem;
+  }
+  .countdown.active { color: #EF4444; }
+  .sample-count { font-size: 0.8rem; color: #2074AA; text-align: center; }
+
+  .debug-toggle {
+    background: none; border: none; color: #2D5585; font-size: 0.8rem;
+    cursor: pointer; padding: 4px 0; width: 100%; text-align: left;
+  }
+  #debugLog {
+    width: 100%; height: 150px; background: #050630; color: #22C55E;
+    border: 1px solid #2D5585; border-radius: 4px; font-family: monospace;
+    font-size: 0.7rem; resize: vertical; margin-top: 6px;
+  }
+  /* ── Metabolic Profiling Mode ─────────────────────── */
+  #metabModeSelect { margin-top: 10px; }
+  .metab-panel { display: none; }
+  .metab-panel .metab-sub { display: none; }
+  .metab-panel .metab-sub.active { display: block; }
+
+  .metab-big-countdown {
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 4rem; font-weight: 700; text-align: center;
+    margin: 16px 0; min-height: 5rem; line-height: 5rem;
+    color: #F59E0B;
+  }
+  .metab-big-countdown.sprint {
+    color: #EF4444;
+    animation: metab-pulse 0.5s ease-in-out infinite alternate;
+  }
+  @keyframes metab-pulse {
+    from { opacity: 1; transform: scale(1); }
+    to   { opacity: 0.7; transform: scale(1.05); }
+  }
+
+  .metab-live-power {
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 2rem; font-weight: 700; text-align: center;
+    color: #33CBF4; margin: 8px 0;
+  }
+  .metab-sprint-label {
+    font-family: 'Chakra Petch', sans-serif; font-size: 1.1rem; font-weight: 600;
+    text-align: center; text-transform: uppercase; letter-spacing: 0.5px;
+    color: #FFFFFF; margin-bottom: 4px;
+  }
+  .metab-sample-count {
+    font-size: 0.8rem; color: #2074AA; text-align: center; margin-top: 4px;
+  }
+
+  .metab-rest-zone {
+    height: 6px; border-radius: 3px; margin: 10px 0;
+    transition: background 0.5s;
+  }
+  .metab-rest-zone.sit { background: #EF4444; }
+  .metab-rest-zone.flush { background: #22C55E; }
+
+  .metab-rest-label {
+    font-family: 'Chakra Petch', sans-serif; font-size: 1.1rem; font-weight: 600;
+    text-align: center; text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .metab-rest-timer {
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 2.5rem; font-weight: 700; text-align: center;
+    color: #F59E0B; margin: 8px 0;
+  }
+  .metab-rest-sit { color: #EF4444; font-weight: 600; text-align: center; }
+  .metab-rest-flush { color: #22C55E; font-weight: 600; text-align: center; }
+
+  .metab-input-group {
+    margin: 10px 0;
+  }
+  .metab-input-group label {
+    display: block; margin-bottom: 4px;
+  }
+  .metab-input-group input[type="number"] {
+    width: 120px;
+  }
+
+  .metab-results-table {
+    width: 100%; border-collapse: collapse; margin: 12px 0;
+  }
+  .metab-results-table th, .metab-results-table td {
+    padding: 8px 10px; text-align: left; border-bottom: 1px solid #2D5585;
+    font-size: 0.85rem;
+  }
+  .metab-results-table th {
+    font-family: 'Chakra Petch', sans-serif; color: #2074AA; font-weight: 600;
+    text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.5px;
+  }
+  .metab-results-table td { color: #FFFFFF; }
+  .metab-results-table td:last-child {
+    font-weight: 700;
+  }
+  .metab-warn { color: #F59E0B; font-size: 0.8rem; margin: 4px 0; }
+
+  .metab-trim-controls {
+    background: #0C0D48; border-radius: 8px; padding: 12px; margin: 12px 0;
+  }
+  .metab-trim-controls .section-title { margin-bottom: 6px; }
+  .metab-trim-row {
+    display: flex; align-items: center; gap: 8px; margin: 6px 0;
+    font-size: 0.85rem;
+  }
+  .metab-trim-row label { min-width: 70px; color: #7BA4C7; }
+  .metab-trim-row input[type="number"] { width: 70px; }
+
+  .metab-chart-container {
+    margin: 12px 0; background: #07083D; border-radius: 8px; padding: 8px;
+  }
+  .metab-chart-container canvas { width: 100% !important; }
+  #metabFigures canvas { margin-top: 12px; }
+
+  .metab-progress {
+    display: flex; gap: 3px; margin-top: 14px; padding: 0 2px;
+  }
+  .metab-progress-step {
+    flex: 1; height: 6px; border-radius: 3px; background: #2D5585;
+    transition: background 0.3s;
+  }
+  .metab-progress-step.done { background: #33CBF4; }
+  .metab-progress-step.active { background: #EF4444; }
+
+  .metab-info { font-size: 0.85rem; color: #7BA4C7; margin: 8px 0; line-height: 1.4; }
+  .metab-info strong { color: #FFFFFF; }
+
+  .btn-metab { background: #33CBF4; color: #fff; width: 100%; }
+  .btn-metab-secondary { background: #2D5585; color: #FFFFFF; width: 100%; margin-top: 8px; }
+  .btn-metab-export { background: #2074AA; color: #fff; width: 100%; margin-top: 8px; }
+  .btn-metab-reset { background: #2D5585; color: #fff; width: 100%; margin-top: 8px; }
+
+  .metab-source-toggle {
+    display: flex; margin-top: 6px;
+  }
+  .metab-source-toggle input[type="radio"] { display: none; }
+  .metab-source-toggle label {
+    flex: 1; text-align: center; padding: 10px 0; font-family: 'Chakra Petch', sans-serif;
+    font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    cursor: pointer; border: 2px solid #2D5585; color: #2074AA; background: #07083D;
+    transition: all 0.15s; position: relative;
+  }
+  .metab-source-toggle label:first-of-type { border-radius: 8px 0 0 8px; }
+  .metab-source-toggle label:last-of-type { border-radius: 0 8px 8px 0; margin-left: -2px; }
+  .metab-source-toggle input[type="radio"]:checked + label {
+    background: #33CBF4; color: #fff; border-color: #33CBF4; z-index: 1;
+  }
+
+  .metab-entry-label {
+    font-family: 'Chakra Petch', sans-serif; font-size: 1.1rem; font-weight: 600;
+    text-align: center; text-transform: uppercase; letter-spacing: 0.5px;
+    color: #FFFFFF; margin-bottom: 8px;
+  }
+  .metab-entry-hint {
+    font-size: 0.8rem; color: #2074AA; text-align: center; margin-top: 6px;
+  }
+
+  .metab-insights { margin: 12px 0; }
+  .metab-insight-card {
+    background: #07083D; border-radius: 8px; padding: 12px 14px; margin: 8px 0;
+    border-left: 4px solid #33CBF4;
+  }
+  .metab-insight-card.alactic { border-left-color: #33CBF4; }
+  .metab-insight-card.glycolytic { border-left-color: #EF4444; }
+  .metab-insight-card.lactate { border-left-color: #EF4444; }
+  .metab-insight-card.fatigue { border-left-color: #F59E0B; }
+  .metab-insight-card.training { border-left-color: #33CBF4; }
+  .metab-insight-card.dominance { border-left-color: #33CBF4; }
+  .metab-insight-tag {
+    display: inline-block; font-family: 'Chakra Petch', sans-serif; font-size: 0.65rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 2px 8px; border-radius: 4px; margin-bottom: 6px;
+  }
+  .metab-insight-tag.alactic { background: rgba(51,203,244,0.15); color: #33CBF4; }
+  .metab-insight-tag.glycolytic { background: rgba(239,68,68,0.15); color: #EF4444; }
+  .metab-insight-tag.lactate { background: rgba(239,68,68,0.15); color: #EF4444; }
+  .metab-insight-tag.fatigue { background: rgba(245,158,11,0.15); color: #F59E0B; }
+  .metab-insight-tag.training { background: rgba(51,203,244,0.15); color: #33CBF4; }
+  .metab-insight-tag.dominance { background: rgba(51,203,244,0.15); color: #33CBF4; }
+  .metab-insight-text { font-size: 0.85rem; color: #FFFFFF; line-height: 1.4; }
+  .metab-insight-text strong { color: #FFFFFF; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<h1><span>Assault Fitness</span> BLE</h1>
+
+<!-- Bike Model -->
+<div class="section">
+  <div class="section-title">Device</div>
+  <select id="bikeModel">
+    <option value="pro">Assault Bike Pro (FTMS Bluetooth)</option>
+    <option value="airrunner">Assault Air Runner (Wahoo Bluetooth)</option>
+  </select>
+  <div style="margin-top: 8px;">
+    <label for="metabModeSelect">Mode:</label>
+    <select id="metabModeSelect">
+      <option value="standard">Standard Mode</option>
+      <option value="metabolic">Anaerobic Glycolytic Profiling Mode</option>
+    </select>
+  </div>
+</div>
+
+<!-- Connection -->
+<div class="section">
+  <div class="section-title">Connection</div>
+  <button class="btn btn-connect" id="btnConnect">Connect</button>
+  <button class="btn btn-disconnect" id="btnDisconnect" disabled>Disconnect</button>
+  <div class="status info" id="statusText">Not connected</div>
+</div>
+
+<!-- Live Data -->
+<div class="section">
+  <div class="section-title">Live Data</div>
+  <div class="data-grid">
+    <div class="data-cell">
+      <div class="data-label">Speed</div>
+      <div class="data-value" id="valSpeed">--<span class="data-unit"> km/h</span></div>
+    </div>
+    <div class="data-cell">
+      <div class="data-label">Cadence</div>
+      <div class="data-value" id="valCadence">--<span class="data-unit"> rpm</span></div>
+    </div>
+    <div class="data-cell">
+      <div class="data-label">Power</div>
+      <div class="data-value" id="valPower">--<span class="data-unit"> W</span></div>
+    </div>
+    <div class="data-cell">
+      <div class="data-label">Distance</div>
+      <div class="data-value" id="valDistance">--<span class="data-unit"> m</span></div>
+    </div>
+    <div class="data-cell">
+      <div class="data-label">Calories</div>
+      <div class="data-value" id="valCalories">--<span class="data-unit"> kcal</span></div>
+    </div>
+    <div class="data-cell">
+      <div class="data-label">Elapsed</div>
+      <div class="data-value" id="valElapsed">--<span class="data-unit"> s</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Recording -->
+<div class="section" id="standardRecording">
+  <div class="section-title">Recording</div>
+  <div class="recording-row">
+    <label for="duration">Duration:</label>
+    <select id="duration">
+      <option value="30">30 s</option>
+      <option value="45">45 s</option>
+      <option value="60">60 s</option>
+      <option value="90">90 s</option>
+      <option value="120">120 s</option>
+      <option value="custom">Custom</option>
+    </select>
+  </div>
+  <div class="recording-row" id="customDurationRow" style="display:none;">
+    <label for="customDuration">Seconds:</label>
+    <input type="number" id="customDuration" min="5" max="3600" value="30" step="1">
+  </div>
+  <button class="btn btn-record" id="btnRecord" disabled>Start Recording</button>
+  <div class="countdown" id="countdown"></div>
+  <div class="sample-count" id="sampleCount"></div>
+</div>
+
+<!-- Download -->
+<div class="section" id="standardExport">
+  <div class="section-title">Export</div>
+  <button class="btn btn-download" id="btnDownload" disabled>Download CSV</button>
+</div>
+
+<!-- Metabolic Profiling Panel -->
+<div class="section metab-panel" id="metabPanel">
+  <div class="section-title">Anaerobic Glycolytic Profiling</div>
+
+  <!-- SETUP -->
+  <div class="metab-sub" id="metabSetup">
+    <div class="metab-info">
+      <strong>Anaerobic Glycolytic Profiling</strong><br>
+      Three sprints (10s / 20s / 30s) with rest periods and blood lactate sampling.
+    </div>
+    <div class="metab-input-group">
+      <label for="metabWeight">Athlete weight (kg):</label>
+      <input type="number" id="metabWeight" min="30" max="250" value="75" step="0.1">
+    </div>
+    <div class="metab-input-group">
+      <label for="metabRestingLa">Resting lactate (mM):</label>
+      <input type="number" id="metabRestingLa" min="0" max="10" value="1.0" step="0.1">
+    </div>
+    <div class="metab-input-group">
+      <label>Data source:</label>
+      <div class="metab-source-toggle">
+        <input type="radio" name="metabDataSource" value="ble" id="metabSrcBle" checked>
+        <label for="metabSrcBle">BLE Connected</label>
+        <input type="radio" name="metabDataSource" value="manual" id="metabSrcManual">
+        <label for="metabSrcManual">Manual Entry</label>
+      </div>
+    </div>
+    <button class="btn btn-metab" id="btnMetabBegin">Begin Protocol</button>
+  </div>
+
+  <!-- WARMUP -->
+  <div class="metab-sub" id="metabWarmup">
+    <div class="metab-info">
+      <strong>Warm up for 5-10 minutes</strong> at a comfortable pace.<br>
+      When ready, ensure BLE is connected and press Start.
+    </div>
+    <button class="btn btn-metab" id="btnMetabStart" disabled>Start Protocol</button>
+    <div style="font-size:0.8rem;color:#2074AA;margin-top:4px;" id="metabWarmupHint">Connect to bike first</div>
+  </div>
+
+  <!-- COUNTDOWN -->
+  <div class="metab-sub" id="metabCountdown">
+    <div class="metab-sprint-label" id="metabCountdownLabel">Get Ready...</div>
+    <div class="metab-big-countdown" id="metabCountdownNum">5</div>
+  </div>
+
+  <!-- SPRINT -->
+  <div class="metab-sub" id="metabSprint">
+    <div class="metab-sprint-label" id="metabSprintLabel">Sprint 1 — 10s</div>
+    <div class="metab-big-countdown sprint" id="metabSprintTimer">10</div>
+    <div class="metab-live-power" id="metabLivePower">-- W</div>
+    <div class="metab-sample-count" id="metabSprintSamples">0 samples</div>
+  </div>
+
+  <!-- MANUAL DATA ENTRY -->
+  <div class="metab-sub" id="metabSprintEntry">
+    <div class="metab-entry-label">Manual Data Entry</div>
+    <div class="metab-entry-hint" style="margin-bottom:12px;">Enter average power (W) for each 10s analysis segment and peak lactate values.</div>
+    <div class="metab-input-group">
+      <label for="metabPower1">Sprint 1 avg power (W) — 0-10s:</label>
+      <input type="number" id="metabPower1" min="0" max="3000" step="1" value="">
+    </div>
+    <div class="metab-input-group">
+      <label for="metabLaManual1">La Peak 1 (mM):</label>
+      <input type="number" id="metabLaManual1" min="0" max="30" step="0.1" value="">
+    </div>
+    <div class="metab-input-group">
+      <label for="metabPower2">Sprint 2 avg power (W) — 10-20s:</label>
+      <input type="number" id="metabPower2" min="0" max="3000" step="1" value="">
+    </div>
+    <div class="metab-input-group">
+      <label for="metabLaManual2">La Peak 2 (mM):</label>
+      <input type="number" id="metabLaManual2" min="0" max="30" step="0.1" value="">
+    </div>
+    <div class="metab-input-group">
+      <label for="metabPower3">Sprint 3 avg power (W) — 20-30s:</label>
+      <input type="number" id="metabPower3" min="0" max="3000" step="1" value="">
+    </div>
+    <div class="metab-input-group">
+      <label for="metabLaManual3">La Peak 3 (mM):</label>
+      <input type="number" id="metabLaManual3" min="0" max="30" step="0.1" value="">
+    </div>
+    <button class="btn btn-metab" id="btnMetabPowerSubmit" style="margin-top:10px;">Calculate Results</button>
+  </div>
+
+  <!-- REST -->
+  <div class="metab-sub" id="metabRest">
+    <div class="metab-rest-label" id="metabRestLabel">Rest 1 — 6:00</div>
+    <div class="metab-rest-timer" id="metabRestTimer">6:00</div>
+    <div class="metab-rest-zone sit" id="metabRestZone"></div>
+    <div id="metabRestInstruction" class="metab-rest-sit">Sit still — do not move</div>
+    <div class="metab-input-group" id="metabLactateGroup" style="display:none;">
+      <label for="metabLactateInput" id="metabLactateLabel">La Peak 1 (mM):</label>
+      <input type="number" id="metabLactateInput" min="0" max="30" step="0.1" value="">
+      <button class="btn btn-metab" id="btnMetabLactateSubmit" style="margin-top:8px;">Submit & Continue</button>
+    </div>
+  </div>
+
+  <!-- POST-TEST -->
+  <div class="metab-sub" id="metabPostTest">
+    <div class="metab-info">
+      <strong>Final blood lactate sample</strong><br>
+      Take the final lactate measurement now.
+    </div>
+    <div class="metab-input-group">
+      <label for="metabLaPeak3">La Peak 3 (mM):</label>
+      <input type="number" id="metabLaPeak3" min="0" max="30" step="0.1" value="">
+    </div>
+    <button class="btn btn-metab" id="btnMetabCalc">Calculate Results</button>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="metab-sub" id="metabResults">
+    <div class="section-title">Results</div>
+    <div id="metabWarnings"></div>
+    <table class="metab-results-table" id="metabResultsTable">
+      <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+      <tbody id="metabResultsBody"></tbody>
+    </table>
+    <div class="metab-chart-container" id="metabFigures">
+      <div class="section-title">Figures</div>
+      <canvas id="metabChartWork"></canvas>
+      <canvas id="metabChartEnergy"></canvas>
+      <canvas id="metabChartSummary"></canvas>
+    </div>
+    <div class="metab-insights" id="metabInsights" style="display:none;">
+      <div class="section-title">Insights</div>
+      <div id="metabInsightsBody"></div>
+    </div>
+    <div class="metab-chart-container" id="metabChartContainer">
+      <canvas id="metabChart"></canvas>
+    </div>
+    <div class="metab-trim-controls">
+      <div class="section-title">Trim Controls</div>
+      <div class="metab-trim-row">
+        <label>Sprint 1:</label>
+        <input type="number" id="metabTrim1" min="0" max="10" value="0" step="0.1">
+        <span style="color:#2074AA;font-size:0.8rem;">s to skip</span>
+      </div>
+      <div class="metab-trim-row">
+        <label>Sprint 2:</label>
+        <input type="number" id="metabTrim2" min="0" max="20" value="0" step="0.1">
+        <span style="color:#2074AA;font-size:0.8rem;">s to skip</span>
+      </div>
+      <div class="metab-trim-row">
+        <label>Sprint 3:</label>
+        <input type="number" id="metabTrim3" min="0" max="30" value="0" step="0.1">
+        <span style="color:#2074AA;font-size:0.8rem;">s to skip</span>
+      </div>
+      <button class="btn btn-metab-secondary" id="btnMetabRecalc">Recalculate</button>
+    </div>
+    <button class="btn btn-metab-export" id="btnMetabExportCSV">Export Anaerobic Glycolytic Profile CSV</button>
+    <button class="btn btn-metab-reset" id="btnMetabReset">Reset Protocol</button>
+  </div>
+
+  <!-- Progress Bar -->
+  <div class="metab-progress" id="metabProgress">
+    <div class="metab-progress-step" data-step="0"></div>
+    <div class="metab-progress-step" data-step="1"></div>
+    <div class="metab-progress-step" data-step="2"></div>
+    <div class="metab-progress-step" data-step="3"></div>
+    <div class="metab-progress-step" data-step="4"></div>
+    <div class="metab-progress-step" data-step="5"></div>
+    <div class="metab-progress-step" data-step="6"></div>
+    <div class="metab-progress-step" data-step="7"></div>
+    <div class="metab-progress-step" data-step="8"></div>
+    <div class="metab-progress-step" data-step="9"></div>
+    <div class="metab-progress-step" data-step="10"></div>
+    <div class="metab-progress-step" data-step="11"></div>
+  </div>
+</div>
+
+<!-- Debug -->
+<div class="section">
+  <button class="debug-toggle" id="debugToggle">+ Debug Log</button>
+  <textarea id="debugLog" style="display:none;" readonly></textarea>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────
+const State = { IDLE: 0, CONNECTING: 1, CONNECTED: 2, RECORDING: 3, RECORDED: 4 };
+let state = State.IDLE;
+
+let bleDevice = null;
+let bleCharacteristic = null;
+let bleControlChar = null;  // Wahoo write characteristic (a026e002)
+let samples = [];
+let recordingTimer = null;
+let recordingStart = 0;
+let remainingSeconds = 0;
+
+// ── DOM refs ───────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const btnConnect = $('btnConnect');
+const btnDisconnect = $('btnDisconnect');
+const btnRecord = $('btnRecord');
+const btnDownload = $('btnDownload');
+const statusText = $('statusText');
+const bikeModel = $('bikeModel');
+const durationSelect = $('duration');
+const customDurationRow = $('customDurationRow');
+const customDurationInput = $('customDuration');
+const countdownEl = $('countdown');
+const sampleCountEl = $('sampleCount');
+const debugLog = $('debugLog');
+const debugToggle = $('debugToggle');
+
+// ── UI Helpers ─────────────────────────────────────────
+function setStatus(msg, type) {
+  statusText.textContent = msg;
+  statusText.className = 'status ' + (type || 'info');
+}
+
+function setState(newState) {
+  state = newState;
+  btnConnect.disabled = state !== State.IDLE;
+  btnDisconnect.disabled = state === State.IDLE || state === State.CONNECTING;
+  btnRecord.disabled = state !== State.CONNECTED && state !== State.RECORDED;
+  btnDownload.disabled = state !== State.RECORDED;
+  bikeModel.disabled = state !== State.IDLE;
+  durationSelect.disabled = state === State.RECORDING;
+  customDurationInput.disabled = state === State.RECORDING;
+
+  if (state === State.RECORDING) {
+    btnRecord.textContent = 'Recording...';
+  } else {
+    btnRecord.textContent = 'Start Recording';
+  }
+}
+
+function updateDisplayLabels() {
+  const isTreadmill = getDeviceType() === 'treadmill';
+  const cadenceCell = $('valCadence').closest('.data-cell');
+  const powerCell = $('valPower').closest('.data-cell');
+  cadenceCell.querySelector('.data-label').textContent = isTreadmill ? 'Pace' : 'Cadence';
+  powerCell.querySelector('.data-label').textContent = isTreadmill ? 'Inclination' : 'Power';
+  resetLiveDisplay();
+}
+
+function updateLiveDisplay(d) {
+  const isTreadmill = getDeviceType() === 'treadmill';
+  $('valSpeed').innerHTML = d.instantSpeed != null
+    ? d.instantSpeed.toFixed(1) + '<span class="data-unit"> km/h</span>'
+    : '--<span class="data-unit"> km/h</span>';
+  if (isTreadmill) {
+    $('valCadence').innerHTML = d.instantPace != null
+      ? d.instantPace.toFixed(1) + '<span class="data-unit"> min/km</span>'
+      : '--<span class="data-unit"> min/km</span>';
+    $('valPower').innerHTML = d.inclination != null
+      ? d.inclination.toFixed(1) + '<span class="data-unit"> %</span>'
+      : '--<span class="data-unit"> %</span>';
+  } else {
+    $('valCadence').innerHTML = d.instantCadence != null
+      ? d.instantCadence.toFixed(0) + '<span class="data-unit"> rpm</span>'
+      : '--<span class="data-unit"> rpm</span>';
+    $('valPower').innerHTML = d.instantPower != null
+      ? d.instantPower + '<span class="data-unit"> W</span>'
+      : '--<span class="data-unit"> W</span>';
+  }
+  $('valDistance').innerHTML = d.totalDistance != null
+    ? d.totalDistance + '<span class="data-unit"> m</span>'
+    : '--<span class="data-unit"> m</span>';
+  $('valCalories').innerHTML = d.totalEnergy != null
+    ? d.totalEnergy + '<span class="data-unit"> kcal</span>'
+    : '--<span class="data-unit"> kcal</span>';
+  $('valElapsed').innerHTML = d.elapsedTime != null
+    ? d.elapsedTime + '<span class="data-unit"> s</span>'
+    : '--<span class="data-unit"> s</span>';
+}
+
+function resetLiveDisplay() {
+  const isTreadmill = getDeviceType() === 'treadmill';
+  $('valSpeed').innerHTML = '--<span class="data-unit"> km/h</span>';
+  $('valCadence').innerHTML = isTreadmill
+    ? '--<span class="data-unit"> min/km</span>'
+    : '--<span class="data-unit"> rpm</span>';
+  $('valPower').innerHTML = isTreadmill
+    ? '--<span class="data-unit"> %</span>'
+    : '--<span class="data-unit"> W</span>';
+  $('valDistance').innerHTML = '--<span class="data-unit"> m</span>';
+  $('valCalories').innerHTML = '--<span class="data-unit"> kcal</span>';
+  $('valElapsed').innerHTML = '--<span class="data-unit"> s</span>';
+}
+
+function log(msg) {
+  const ts = new Date().toISOString().substr(11, 12);
+  debugLog.value += '[' + ts + '] ' + msg + '\n';
+  debugLog.scrollTop = debugLog.scrollHeight;
+}
+
+// ── FTMS Parser ────────────────────────────────────────
+// Parses Indoor Bike Data characteristic (0x2AD2)
+// CRITICAL: Bit 0 is INVERTED — speed present when bit 0 = 0
+function parseFTMS(dataView) {
+  const flags = dataView.getUint16(0, true);
+  let offset = 2;
+  const result = { flags: flags };
+
+  function readUint16() { const v = dataView.getUint16(offset, true); offset += 2; return v; }
+  function readSint16() { const v = dataView.getInt16(offset, true); offset += 2; return v; }
+  function readUint8()  { const v = dataView.getUint8(offset); offset += 1; return v; }
+  function readUint24() {
+    const b0 = dataView.getUint8(offset);
+    const b1 = dataView.getUint8(offset + 1);
+    const b2 = dataView.getUint8(offset + 2);
+    offset += 3;
+    return b0 | (b1 << 8) | (b2 << 16);
+  }
+
+  // Bit 0: Instantaneous Speed — present when bit is 0 (inverted!)
+  if (!(flags & 0x0001)) {
+    result.instantSpeed = readUint16() * 0.01;
+  }
+
+  // Bit 1: Average Speed
+  if (flags & 0x0002) {
+    result.averageSpeed = readUint16() * 0.01;
+  }
+
+  // Bit 2: Instantaneous Cadence
+  if (flags & 0x0004) {
+    result.instantCadence = readUint16() * 0.5;
+  }
+
+  // Bit 3: Average Cadence
+  if (flags & 0x0008) {
+    result.averageCadence = readUint16() * 0.5;
+  }
+
+  // Bit 4: Total Distance (uint24, 3 bytes)
+  if (flags & 0x0010) {
+    result.totalDistance = readUint24();
+  }
+
+  // Bit 5: Resistance Level
+  if (flags & 0x0020) {
+    result.resistanceLevel = readSint16();
+  }
+
+  // Bit 6: Instantaneous Power
+  if (flags & 0x0040) {
+    result.instantPower = readSint16();
+  }
+
+  // Bit 7: Average Power
+  if (flags & 0x0080) {
+    result.averagePower = readSint16();
+  }
+
+  // Bit 8: Expended Energy (uint16 + uint16 + uint8 = 5 bytes)
+  if (flags & 0x0100) {
+    result.totalEnergy = readUint16();
+    result.energyPerHour = readUint16();
+    result.energyPerMinute = readUint8();
+  }
+
+  // Bit 9: Heart Rate
+  if (flags & 0x0200) {
+    result.heartRate = readUint8();
+  }
+
+  // Bit 10: Metabolic Equivalent
+  if (flags & 0x0400) {
+    result.metabolicEquivalent = readUint8() * 0.1;
+  }
+
+  // Bit 11: Elapsed Time
+  if (flags & 0x0800) {
+    result.elapsedTime = readUint16();
+  }
+
+  // Bit 12: Remaining Time
+  if (flags & 0x1000) {
+    result.remainingTime = readUint16();
+  }
+
+  return result;
+}
+
+// Parses Treadmill Data characteristic (0x2ACD)
+// CRITICAL: Bit 0 is INVERTED — speed present when bit 0 = 0
+function parseTreadmill(dataView) {
+  const flags = dataView.getUint16(0, true);
+  let offset = 2;
+  const result = { flags: flags };
+
+  function readUint16() { const v = dataView.getUint16(offset, true); offset += 2; return v; }
+  function readSint16() { const v = dataView.getInt16(offset, true); offset += 2; return v; }
+  function readUint8()  { const v = dataView.getUint8(offset); offset += 1; return v; }
+  function readUint24() {
+    const b0 = dataView.getUint8(offset);
+    const b1 = dataView.getUint8(offset + 1);
+    const b2 = dataView.getUint8(offset + 2);
+    offset += 3;
+    return b0 | (b1 << 8) | (b2 << 16);
+  }
+
+  // Bit 0: Instantaneous Speed — present when bit is 0 (inverted!)
+  if (!(flags & 0x0001)) {
+    result.instantSpeed = readUint16() * 0.01;
+  }
+
+  // Bit 1: Average Speed
+  if (flags & 0x0002) {
+    result.averageSpeed = readUint16() * 0.01;
+  }
+
+  // Bit 2: Total Distance (uint24)
+  if (flags & 0x0004) {
+    result.totalDistance = readUint24();
+  }
+
+  // Bit 3: Inclination (sint16 * 0.1%) + Ramp Angle (sint16 * 0.1 deg)
+  if (flags & 0x0008) {
+    result.inclination = readSint16() * 0.1;
+    result.rampAngle = readSint16() * 0.1;
+  }
+
+  // Bit 4: Positive Elevation Gain (uint16 * 0.1m) + Negative Elevation Gain (uint16 * 0.1m)
+  if (flags & 0x0010) {
+    result.positiveElevationGain = readUint16() * 0.1;
+    result.negativeElevationGain = readUint16() * 0.1;
+  }
+
+  // Bit 5: Instantaneous Pace (uint8 * 0.1 min/km)
+  if (flags & 0x0020) {
+    result.instantPace = readUint8() * 0.1;
+  }
+
+  // Bit 6: Average Pace (uint8 * 0.1 min/km)
+  if (flags & 0x0040) {
+    result.averagePace = readUint8() * 0.1;
+  }
+
+  // Bit 7: Expended Energy (uint16 + uint16 + uint8 = 5 bytes)
+  if (flags & 0x0080) {
+    result.totalEnergy = readUint16();
+    result.energyPerHour = readUint16();
+    result.energyPerMinute = readUint8();
+  }
+
+  // Bit 8: Heart Rate
+  if (flags & 0x0100) {
+    result.heartRate = readUint8();
+  }
+
+  // Bit 9: Metabolic Equivalent
+  if (flags & 0x0200) {
+    result.metabolicEquivalent = readUint8() * 0.1;
+  }
+
+  // Bit 10: Elapsed Time
+  if (flags & 0x0400) {
+    result.elapsedTime = readUint16();
+  }
+
+  // Bit 11: Remaining Time
+  if (flags & 0x0800) {
+    result.remainingTime = readUint16();
+  }
+
+  // Bit 12: Force on Belt (sint16 N) + Power Output (sint16 W)
+  if (flags & 0x1000) {
+    result.forceOnBelt = readSint16();
+    result.powerOutput = readSint16();
+  }
+
+  return result;
+}
+
+function toHex(dataView) {
+  const bytes = [];
+  for (let i = 0; i < dataView.byteLength; i++) {
+    bytes.push(dataView.getUint8(i).toString(16).padStart(2, '0'));
+  }
+  return bytes.join(' ');
+}
+
+// ── Bluetooth ──────────────────────────────────────────
+const FTMS_SERVICE = 0x1826;
+const INDOOR_BIKE_DATA = 0x2AD2;
+const TREADMILL_DATA = 0x2ACD;
+
+// Wahoo proprietary UUIDs (used by Assault Air Runner)
+const WAHOO_SERVICE = 'a026ee01-0a7d-4ab3-97fa-f1500f9feb8b';
+const WAHOO_CONTROL_CHAR = 'a026e002-0a7d-4ab3-97fa-f1500f9feb8b';  // notify + write
+const WAHOO_DATA_CHAR = 'a026e004-0a7d-4ab3-97fa-f1500f9feb8b';     // notify only
+const WAHOO_UNLOCK_CMD = new Uint8Array([0x20, 0xEE, 0xFC]);
+
+function getDeviceType() {
+  return bikeModel.value === 'airrunner' ? 'treadmill' : 'bike';
+}
+
+async function connect() {
+  // Pre-checks
+  if (!navigator.bluetooth) {
+    setStatus('Web Bluetooth not available. Use Chrome on Android.', 'error');
+    return;
+  }
+
+  setState(State.CONNECTING);
+  setStatus('Requesting device...', 'info');
+  log('Requesting BLE device, model=' + bikeModel.value);
+
+  try {
+    let requestOptions;
+    if (bikeModel.value === 'pro') {
+      requestOptions = { filters: [{ services: [FTMS_SERVICE] }] };
+    } else if (bikeModel.value === 'airrunner') {
+      requestOptions = {
+        filters: [{ namePrefix: 'Assault Treadmill' }],
+        optionalServices: [WAHOO_SERVICE, 'a026ee03-0a7d-4ab3-97fa-f1500f9feb8b', 'a026ee07-0a7d-4ab3-97fa-f1500f9feb8b']
+      };
+    }
+
+    bleDevice = await navigator.bluetooth.requestDevice(requestOptions);
+    log('Device selected: ' + bleDevice.name);
+    setStatus('Connecting to ' + (bleDevice.name || 'device') + '...', 'info');
+
+    bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
+
+    const server = await bleDevice.gatt.connect();
+    log('GATT connected');
+
+    if (bikeModel.value === 'airrunner') {
+      // Wahoo proprietary protocol
+      let wahooService;
+      try {
+        wahooService = await server.getPrimaryService(WAHOO_SERVICE);
+      } catch (e) {
+        throw new Error('Wahoo service not found. Device may not be compatible.');
+      }
+      log('Wahoo service found');
+
+      // Get both characteristics
+      try {
+        bleControlChar = await wahooService.getCharacteristic(WAHOO_CONTROL_CHAR);
+      } catch (e) {
+        throw new Error('Wahoo control characteristic (a026e002) not found.');
+      }
+      log('Wahoo control char (a026e002) found');
+
+      try {
+        bleCharacteristic = await wahooService.getCharacteristic(WAHOO_DATA_CHAR);
+      } catch (e) {
+        throw new Error('Wahoo data characteristic (a026e004) not found.');
+      }
+      log('Wahoo data char (a026e004) found');
+
+      // Subscribe to notifications on both characteristics
+      await bleControlChar.startNotifications();
+      bleControlChar.addEventListener('characteristicvaluechanged', onWahooControl);
+      log('Control char notifications started');
+
+      await bleCharacteristic.startNotifications();
+      bleCharacteristic.addEventListener('characteristicvaluechanged', onNotification);
+      log('Data char notifications started');
+
+      // Send unlock command
+      try {
+        await bleControlChar.writeValueWithoutResponse(WAHOO_UNLOCK_CMD);
+        log('Unlock command sent: ' + toHex(new DataView(WAHOO_UNLOCK_CMD.buffer)));
+      } catch (e) {
+        log('Unlock write failed: ' + e.message + ' (may still work)');
+      }
+
+    } else {
+      // Standard FTMS protocol (Bike Pro)
+      let service;
+      try {
+        service = await server.getPrimaryService(FTMS_SERVICE);
+      } catch (e) {
+        throw new Error('FTMS service (0x1826) not found on device.');
+      }
+      log('FTMS service found');
+
+      try {
+        bleCharacteristic = await service.getCharacteristic(INDOOR_BIKE_DATA);
+      } catch (e) {
+        throw new Error('Indoor Bike Data (0x2AD2) characteristic not found.');
+      }
+      log('Indoor Bike Data characteristic found');
+
+      await bleCharacteristic.startNotifications();
+      bleCharacteristic.addEventListener('characteristicvaluechanged', onNotification);
+      log('Notifications started');
+    }
+
+    setState(State.CONNECTED);
+    setStatus('Connected to ' + (bleDevice.name || 'device'), 'success');
+
+  } catch (err) {
+    log('Error: ' + err.message);
+    cleanup();
+    setState(State.IDLE);
+
+    if (err.name === 'NotFoundError') {
+      setStatus('No device selected.', 'warning');
+    } else if (err.name === 'SecurityError') {
+      setStatus('Must be served over HTTPS or localhost.', 'error');
+    } else if (err.name === 'NetworkError') {
+      setStatus('Connection failed. Check device is on and in range.', 'error');
+    } else {
+      setStatus('Error: ' + err.message, 'error');
+    }
+  }
+}
+
+function disconnect() {
+  if (state === State.RECORDING) {
+    stopRecording(true);
+  }
+  cleanup();
+  setState(State.IDLE);
+  setStatus('Disconnected.', 'info');
+  resetLiveDisplay();
+  log('Manually disconnected');
+}
+
+function cleanup() {
+  if (bleControlChar) {
+    try {
+      bleControlChar.removeEventListener('characteristicvaluechanged', onWahooControl);
+      bleControlChar.stopNotifications().catch(() => {});
+    } catch (e) {}
+    bleControlChar = null;
+  }
+  if (bleCharacteristic) {
+    try {
+      bleCharacteristic.removeEventListener('characteristicvaluechanged', onNotification);
+      bleCharacteristic.stopNotifications().catch(() => {});
+    } catch (e) {}
+    bleCharacteristic = null;
+  }
+  if (bleDevice) {
+    bleDevice.removeEventListener('gattserverdisconnected', onDisconnected);
+    if (bleDevice.gatt && bleDevice.gatt.connected) {
+      bleDevice.gatt.disconnect();
+    }
+  }
+  bleDevice = null;
+}
+
+function onDisconnected() {
+  log('GATT disconnected unexpectedly');
+  bleCharacteristic = null;
+
+  if (state === State.RECORDING) {
+    stopRecording(true);
+    setStatus('Connection lost. Partial data preserved (' + samples.length + ' samples).', 'warning');
+    setState(State.RECORDED);
+  } else {
+    setState(State.IDLE);
+    setStatus('Connection lost. Check device is on and in range.', 'warning');
+    resetLiveDisplay();
+  }
+  bleDevice = null;
+}
+
+// Wahoo control characteristic response handler
+function onWahooControl(event) {
+  const dv = event.target.value;
+  log('CTRL RX: ' + toHex(dv));
+}
+
+// Attempt to parse Wahoo treadmill raw bytes into a normalized object
+function parseWahooTreadmill(dv) {
+  const result = { flags: 0, rawLength: dv.byteLength };
+  // Raw capture — log all bytes for reverse engineering
+  // Once the data format is decoded, this will be replaced with proper parsing
+  log('  Wahoo raw (' + dv.byteLength + ' bytes): ' + toHex(dv));
+
+  // Try to extract fields by reading common byte positions
+  // These are guesses based on typical treadmill data layouts — will be refined
+  if (dv.byteLength >= 2) {
+    // First two bytes may be speed (uint16 LE, * 0.01 km/h) or a header/flags field
+    const b0b1 = dv.getUint16(0, true);
+    log('  bytes[0-1] uint16=' + b0b1 + ' (if speed*100: ' + (b0b1 * 0.01).toFixed(2) + ' km/h)');
+  }
+  if (dv.byteLength >= 4) {
+    const b2b3 = dv.getUint16(2, true);
+    log('  bytes[2-3] uint16=' + b2b3);
+  }
+  if (dv.byteLength >= 6) {
+    const b4b5 = dv.getUint16(4, true);
+    log('  bytes[4-5] uint16=' + b4b5);
+  }
+
+  return result;
+}
+
+function onNotification(event) {
+  const dv = event.target.value;
+  const hex = toHex(dv);
+  const isTreadmill = getDeviceType() === 'treadmill';
+  const isWahoo = bikeModel.value === 'airrunner';
+
+  let parsed;
+  if (isWahoo) {
+    parsed = parseWahooTreadmill(dv);
+  } else if (isTreadmill) {
+    parsed = parseTreadmill(dv);
+  } else {
+    parsed = parseFTMS(dv);
+  }
+
+  log('RX [' + (isWahoo ? 'wahoo' : isTreadmill ? 'treadmill' : 'bike') + ']: ' + hex);
+  if (!isWahoo) {
+    if (isTreadmill) {
+      log('  → spd=' + (parsed.instantSpeed != null ? parsed.instantSpeed.toFixed(1) : '-')
+        + ' pace=' + (parsed.instantPace != null ? parsed.instantPace.toFixed(1) : '-')
+        + ' incl=' + (parsed.inclination != null ? parsed.inclination.toFixed(1) : '-')
+        + ' dist=' + (parsed.totalDistance != null ? parsed.totalDistance : '-')
+        + ' cal=' + (parsed.totalEnergy != null ? parsed.totalEnergy : '-')
+        + ' time=' + (parsed.elapsedTime != null ? parsed.elapsedTime : '-'));
+    } else {
+      log('  → spd=' + (parsed.instantSpeed != null ? parsed.instantSpeed.toFixed(1) : '-')
+        + ' cad=' + (parsed.instantCadence != null ? parsed.instantCadence.toFixed(0) : '-')
+        + ' pwr=' + (parsed.instantPower != null ? parsed.instantPower : '-')
+        + ' dist=' + (parsed.totalDistance != null ? parsed.totalDistance : '-')
+        + ' cal=' + (parsed.totalEnergy != null ? parsed.totalEnergy : '-')
+        + ' time=' + (parsed.elapsedTime != null ? parsed.elapsedTime : '-'));
+    }
+  }
+
+  updateLiveDisplay(parsed);
+
+  if (state === State.RECORDING) {
+    const now = Date.now();
+    samples.push({
+      timestampMs: now,
+      elapsedMs: now - recordingStart,
+      parsed: parsed,
+      rawHex: hex
+    });
+    sampleCountEl.textContent = samples.length + ' sample' + (samples.length !== 1 ? 's' : '') + ' captured';
+  }
+}
+
+// ── Recording ──────────────────────────────────────────
+function startRecording() {
+  const durValue = durationSelect.value === 'custom'
+    ? parseInt(customDurationInput.value, 10)
+    : parseInt(durationSelect.value, 10);
+  if (isNaN(durValue) || durValue < 5 || durValue > 3600) {
+    setStatus('Duration must be 5-3600 seconds.', 'error');
+    return;
+  }
+  const dur = durValue;
+
+  samples = [];
+  recordingStart = Date.now();
+  remainingSeconds = dur;
+
+  setState(State.RECORDING);
+  setStatus('Recording...', 'recording');
+  countdownEl.textContent = remainingSeconds + 's';
+  countdownEl.classList.add('active');
+  sampleCountEl.textContent = '0 samples captured';
+
+  log('Recording started, duration=' + dur + 's');
+
+  recordingTimer = setInterval(() => {
+    remainingSeconds--;
+    countdownEl.textContent = remainingSeconds + 's';
+    if (remainingSeconds <= 0) {
+      stopRecording(false);
+    }
+  }, 1000);
+}
+
+function stopRecording(interrupted) {
+  if (recordingTimer) {
+    clearInterval(recordingTimer);
+    recordingTimer = null;
+  }
+
+  countdownEl.classList.remove('active');
+
+  if (interrupted) {
+    countdownEl.textContent = 'Interrupted';
+    log('Recording interrupted, ' + samples.length + ' samples');
+  } else {
+    countdownEl.textContent = 'Done!';
+    log('Recording complete, ' + samples.length + ' samples');
+  }
+
+  if (samples.length > 0) {
+    // If still connected, go to RECORDED; if disconnected, onDisconnected handles it
+    if (state === State.RECORDING) {
+      setState(State.RECORDED);
+      if (!interrupted) {
+        setStatus('Recording complete. ' + samples.length + ' samples captured.', 'success');
+      }
+    }
+  } else {
+    if (bleDevice && bleDevice.gatt && bleDevice.gatt.connected) {
+      setState(State.CONNECTED);
+    } else {
+      setState(State.IDLE);
+    }
+    setStatus('No samples captured.', 'warning');
+  }
+}
+
+// ── CSV Export ─────────────────────────────────────────
+function downloadCSV() {
+  if (samples.length === 0) return;
+
+  const isWahoo = bikeModel.value === 'airrunner';
+  const isBike = !isWahoo;
+
+  let headers, rows;
+  if (isWahoo) {
+    // Wahoo raw capture mode — save raw hex + any decoded fields
+    headers = ['timestamp_ms', 'elapsed_ms', 'raw_hex', 'byte_length'];
+    rows = samples.map(s => [
+      s.timestampMs,
+      s.elapsedMs,
+      s.rawHex,
+      s.parsed.rawLength || ''
+    ].join(','));
+  } else {
+    headers = [
+      'timestamp_ms', 'elapsed_ms',
+      'instant_speed_kmh', 'average_speed_kmh',
+      'instant_cadence_rpm', 'average_cadence_rpm',
+      'total_distance_m', 'resistance_level',
+      'instant_power_watts', 'average_power_watts',
+      'total_energy_kcal', 'energy_per_hour_kcal', 'energy_per_minute_kcal',
+      'heart_rate_bpm', 'metabolic_equivalent',
+      'elapsed_time_s', 'remaining_time_s',
+      'raw_flags'
+    ];
+    rows = samples.map(s => {
+      const p = s.parsed;
+      return [
+        s.timestampMs,
+        s.elapsedMs,
+        p.instantSpeed != null ? p.instantSpeed : '',
+        p.averageSpeed != null ? p.averageSpeed : '',
+        p.instantCadence != null ? p.instantCadence : '',
+        p.averageCadence != null ? p.averageCadence : '',
+        p.totalDistance != null ? p.totalDistance : '',
+        p.resistanceLevel != null ? p.resistanceLevel : '',
+        p.instantPower != null ? p.instantPower : '',
+        p.averagePower != null ? p.averagePower : '',
+        p.totalEnergy != null ? p.totalEnergy : '',
+        p.energyPerHour != null ? p.energyPerHour : '',
+        p.energyPerMinute != null ? p.energyPerMinute : '',
+        p.heartRate != null ? p.heartRate : '',
+        p.metabolicEquivalent != null ? p.metabolicEquivalent : '',
+        p.elapsedTime != null ? p.elapsedTime : '',
+        p.remainingTime != null ? p.remainingTime : '',
+        '0x' + p.flags.toString(16).padStart(4, '0')
+      ].join(',');
+    });
+  }
+
+  const csv = headers.join(',') + '\n' + rows.join('\n') + '\n';
+  const blob = new Blob([csv], { type: 'text/csv' });
+
+  const now = new Date();
+  const ts = now.toISOString().replace(/:/g, '-').replace(/\.\d+Z$/, '');
+  const filename = (isWahoo ? 'assault-airrunner-raw-' : 'assault-bike-') + ts + '.csv';
+
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+
+  log('CSV downloaded: ' + filename + ' (' + samples.length + ' rows)');
+}
+
+// ── Event Listeners ────────────────────────────────────
+btnConnect.addEventListener('click', connect);
+btnDisconnect.addEventListener('click', disconnect);
+btnRecord.addEventListener('click', startRecording);
+btnDownload.addEventListener('click', downloadCSV);
+bikeModel.addEventListener('change', updateDisplayLabels);
+
+debugToggle.addEventListener('click', () => {
+  const visible = debugLog.style.display !== 'none';
+  debugLog.style.display = visible ? 'none' : 'block';
+  debugToggle.textContent = (visible ? '+' : '−') + ' Debug Log';
+});
+
+// Toggle custom duration input
+durationSelect.addEventListener('change', () => {
+  customDurationRow.style.display = durationSelect.value === 'custom' ? 'flex' : 'none';
+});
+
+// Clamp custom duration input
+customDurationInput.addEventListener('change', () => {
+  let v = parseInt(customDurationInput.value, 10);
+  if (isNaN(v)) v = 30;
+  customDurationInput.value = Math.max(5, Math.min(3600, v));
+});
+
+// Initial check
+if (!navigator.bluetooth) {
+  setStatus('Web Bluetooth not available. Use Chrome on Android.', 'error');
+  btnConnect.disabled = true;
+}
+
+setState(State.IDLE);
+updateDisplayLabels();
+log('App initialized');
+
+// ══════════════════════════════════════════════════════
+// ── Metabolic Profiling Mode ─────────────────────────
+// ══════════════════════════════════════════════════════
+
+const MetabState = {
+  INACTIVE: 0, SETUP: 1, WARMUP: 2,
+  COUNTDOWN_1: 3, SPRINT_1: 4, REST_1: 5,
+  COUNTDOWN_2: 6, SPRINT_2: 7, REST_2: 8,
+  COUNTDOWN_3: 9, SPRINT_3: 10,
+  POST_TEST: 11, RESULTS: 12,
+  SPRINT_ENTRY: 13
+};
+
+// Step index for progress bar (maps MetabState to 0-11)
+const METAB_STEP_MAP = {
+  [MetabState.INACTIVE]: -1,
+  [MetabState.SETUP]: 0, [MetabState.WARMUP]: 1,
+  [MetabState.COUNTDOWN_1]: 2, [MetabState.SPRINT_1]: 3, [MetabState.REST_1]: 4,
+  [MetabState.COUNTDOWN_2]: 5, [MetabState.SPRINT_2]: 6, [MetabState.REST_2]: 7,
+  [MetabState.COUNTDOWN_3]: 8, [MetabState.SPRINT_3]: 9,
+  [MetabState.POST_TEST]: 10, [MetabState.RESULTS]: 11,
+  [MetabState.SPRINT_ENTRY]: 10
+};
+
+let metabState = MetabState.INACTIVE;
+let metabTimer = null;
+let metabActiveSprintNum = 0;  // 1, 2, or 3 during sprints; 0 otherwise
+let metabSprintStart = 0;
+
+// Sprint data arrays
+let sprint1Data = [];
+let sprint2Data = [];
+let sprint3Data = [];
+
+// Lactate values
+let metabRestingLa = 1.0;
+let metabLaPeak1 = null;
+let metabLaPeak2 = null;
+let metabLaPeak3 = null;
+let metabWeight = 75;
+
+// Chart instances
+let metabChartInstance = null;
+let metabChartWork = null;
+let metabChartEnergy = null;
+let metabChartSummary = null;
+
+// Manual entry mode
+let metabManualMode = false;
+let metabManualMechJ = [0, 0, 0];
+
+// Wake lock
+let metabWakeLock = null;
+
+// ── Metabolic DOM refs ────────────────────────────────
+const metabModeSelect = $('metabModeSelect');
+const metabPanel = $('metabPanel');
+const standardRecording = $('standardRecording');
+const standardExport = $('standardExport');
+const btnMetabBegin = $('btnMetabBegin');
+const btnMetabStart = $('btnMetabStart');
+const metabWarmupHint = $('metabWarmupHint');
+const btnMetabLactateSubmit = $('btnMetabLactateSubmit');
+const btnMetabCalc = $('btnMetabCalc');
+const btnMetabRecalc = $('btnMetabRecalc');
+const btnMetabExportCSV = $('btnMetabExportCSV');
+const btnMetabReset = $('btnMetabReset');
+
+// ── Audio Beeps (Web Audio API) ───────────────────────
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (e) { return null; }
+  }
+  return audioCtx;
+}
+
+function playBeep(freq, durationMs) {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.frequency.value = freq;
+  gain.gain.value = 0.3;
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + durationMs / 1000);
+}
+
+function beepCountdown() { playBeep(800, 100); }
+function beepGo() { playBeep(1200, 250); }
+function beepStop() { playBeep(400, 300); }
+
+// ── Wake Lock ──────────────────────────────────────────
+async function requestWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      metabWakeLock = await navigator.wakeLock.request('screen');
+      log('Wake lock acquired');
+    } catch (e) { log('Wake lock failed: ' + e.message); }
+  }
+}
+
+function releaseWakeLock() {
+  if (metabWakeLock) {
+    metabWakeLock.release().catch(() => {});
+    metabWakeLock = null;
+    log('Wake lock released');
+  }
+}
+
+// ── Mode Switching ────────────────────────────────────
+metabModeSelect.addEventListener('change', () => {
+  const mode = metabModeSelect.value;
+  if (mode === 'metabolic' && metabState !== MetabState.INACTIVE) {
+    if (!confirm('Switching modes will abandon the current anaerobic protocol. Continue?')) {
+      metabModeSelect.value = 'metabolic';
+      return;
+    }
+    resetMetabProtocol();
+  }
+
+  if (mode === 'metabolic') {
+    // Lock to Bike Pro
+    if (bikeModel.value !== 'pro') {
+      bikeModel.value = 'pro';
+      updateDisplayLabels();
+    }
+    bikeModel.disabled = true;
+    standardRecording.style.display = 'none';
+    standardExport.style.display = 'none';
+    metabPanel.style.display = 'block';
+    setMetabState(MetabState.SETUP);
+  } else {
+    if (metabState !== MetabState.INACTIVE) {
+      if (!confirm('Switching to standard mode will abandon the anaerobic protocol. Continue?')) {
+        metabModeSelect.value = 'metabolic';
+        return;
+      }
+      resetMetabProtocol();
+    }
+    bikeModel.disabled = (state !== State.IDLE);
+    standardRecording.style.display = '';
+    standardExport.style.display = '';
+    metabPanel.style.display = 'none';
+    setMetabState(MetabState.INACTIVE);
+  }
+});
+
+// ── State Machine ──────────────────────────────────────
+function setMetabState(newState) {
+  // Clear any running timer
+  if (metabTimer) {
+    clearInterval(metabTimer);
+    metabTimer = null;
+  }
+  metabActiveSprintNum = 0;
+  metabState = newState;
+
+  // Hide all sub-panels
+  document.querySelectorAll('.metab-sub').forEach(el => el.classList.remove('active'));
+
+  // Update progress bar
+  updateMetabProgress();
+
+  // Show appropriate sub-panel
+  switch (newState) {
+    case MetabState.INACTIVE:
+      releaseWakeLock();
+      break;
+    case MetabState.SETUP:
+      $('metabSetup').classList.add('active');
+      break;
+    case MetabState.WARMUP:
+      $('metabWarmup').classList.add('active');
+      updateMetabWarmupButton();
+      break;
+    case MetabState.COUNTDOWN_1:
+      requestWakeLock();
+      $('metabCountdown').classList.add('active');
+      $('metabCountdownLabel').textContent = 'Sprint 1 — Get Ready!';
+      startMetabCountdown(5, () => setMetabState(MetabState.SPRINT_1));
+      break;
+    case MetabState.SPRINT_1:
+      $('metabSprint').classList.add('active');
+      startMetabSprint(1, 10);
+      break;
+    case MetabState.REST_1:
+      $('metabRest').classList.add('active');
+      startMetabRest(1, 6 * 60, { allSit: true });
+      break;
+    case MetabState.COUNTDOWN_2:
+      $('metabCountdown').classList.add('active');
+      $('metabCountdownLabel').textContent = 'Sprint 2 — Get Ready!';
+      startMetabCountdown(5, () => setMetabState(MetabState.SPRINT_2));
+      break;
+    case MetabState.SPRINT_2:
+      $('metabSprint').classList.add('active');
+      startMetabSprint(2, 20);
+      break;
+    case MetabState.REST_2:
+      $('metabRest').classList.add('active');
+      startMetabRest(2, 15 * 60, { allSit: false });
+      break;
+    case MetabState.COUNTDOWN_3:
+      $('metabCountdown').classList.add('active');
+      $('metabCountdownLabel').textContent = 'Sprint 3 — Get Ready!';
+      startMetabCountdown(5, () => setMetabState(MetabState.SPRINT_3));
+      break;
+    case MetabState.SPRINT_3:
+      $('metabSprint').classList.add('active');
+      startMetabSprint(3, 30);
+      break;
+    case MetabState.SPRINT_ENTRY:
+      $('metabSprintEntry').classList.add('active');
+      break;
+    case MetabState.POST_TEST:
+      $('metabPostTest').classList.add('active');
+      $('metabLaPeak3').value = '';
+      break;
+    case MetabState.RESULTS:
+      $('metabResults').classList.add('active');
+      if (metabManualMode) {
+        $('metabChartContainer').style.display = 'none';
+        document.querySelector('.metab-trim-controls').style.display = 'none';
+      } else {
+        $('metabChartContainer').style.display = '';
+        document.querySelector('.metab-trim-controls').style.display = '';
+      }
+      calculateMetabolicProfile();
+      renderMetabFigures();
+      renderMetabInsights();
+      if (!metabManualMode) renderMetabChart();
+      releaseWakeLock();
+      break;
+  }
+
+  log('MetabState → ' + Object.keys(MetabState).find(k => MetabState[k] === newState));
+}
+
+function updateMetabProgress() {
+  const stepIdx = METAB_STEP_MAP[metabState];
+  document.querySelectorAll('.metab-progress-step').forEach(el => {
+    const s = parseInt(el.dataset.step);
+    el.classList.remove('done', 'active');
+    if (s < stepIdx) el.classList.add('done');
+    else if (s === stepIdx) el.classList.add('active');
+  });
+}
+
+// ── Update warmup button based on BLE state ───────────
+function updateMetabWarmupButton() {
+  if (metabState !== MetabState.WARMUP) return;
+  if (metabManualMode) {
+    btnMetabStart.disabled = false;
+    metabWarmupHint.textContent = 'Manual entry mode — no BLE needed';
+    metabWarmupHint.style.color = '#F59E0B';
+    return;
+  }
+  const connected = (state === State.CONNECTED || state === State.RECORDED);
+  btnMetabStart.disabled = !connected;
+  metabWarmupHint.textContent = connected ? 'BLE connected — ready to go' : 'Connect to bike first';
+  metabWarmupHint.style.color = connected ? '#22C55E' : '#2074AA';
+}
+
+// Patch setState to also update warmup button
+const _origSetState = setState;
+setState = function(newState) {
+  _origSetState(newState);
+  // When in metabolic mode, keep device selector locked
+  if (metabModeSelect.value === 'metabolic') {
+    bikeModel.disabled = true;
+  }
+  updateMetabWarmupButton();
+};
+
+// ── Countdown Timer ────────────────────────────────────
+function startMetabCountdown(seconds, onComplete) {
+  let remaining = seconds;
+  $('metabCountdownNum').textContent = remaining;
+  $('metabCountdownNum').classList.remove('sprint');
+  beepCountdown();
+
+  metabTimer = setInterval(() => {
+    remaining--;
+    if (remaining > 0) {
+      $('metabCountdownNum').textContent = remaining;
+      beepCountdown();
+    } else {
+      clearInterval(metabTimer);
+      metabTimer = null;
+      beepGo();
+      onComplete();
+    }
+  }, 1000);
+}
+
+// ── Sprint Timer ───────────────────────────────────────
+function startMetabSprint(sprintNum, durationSec) {
+  const labels = { 1: 'Sprint 1 — 10s', 2: 'Sprint 2 — 20s', 3: 'Sprint 3 — 30s' };
+  $('metabSprintLabel').textContent = labels[sprintNum];
+  $('metabSprintTimer').textContent = durationSec;
+  $('metabLivePower').textContent = '-- W';
+  $('metabSprintSamples').textContent = '0 samples';
+
+  // Clear sprint data array
+  if (sprintNum === 1) sprint1Data = [];
+  else if (sprintNum === 2) sprint2Data = [];
+  else sprint3Data = [];
+
+  metabActiveSprintNum = sprintNum;
+  metabSprintStart = Date.now();
+  let remaining = durationSec;
+
+  metabTimer = setInterval(() => {
+    remaining--;
+    $('metabSprintTimer').textContent = remaining;
+    if (remaining <= 0) {
+      clearInterval(metabTimer);
+      metabTimer = null;
+      metabActiveSprintNum = 0;
+      beepStop();
+
+      // Transition
+      if (sprintNum === 1) setMetabState(MetabState.REST_1);
+      else if (sprintNum === 2) setMetabState(MetabState.REST_2);
+      else setMetabState(MetabState.POST_TEST);
+    }
+  }, 1000);
+}
+
+// ── Rest Timer ─────────────────────────────────────────
+function startMetabRest(restNum, durationSec, config) {
+  const restLabels = { 1: 'Rest 1', 2: 'Rest 2' };
+  const lactateLabels = { 1: 'La Peak 1 (mM):', 2: 'La Peak 2 (mM):' };
+  $('metabRestLabel').textContent = restLabels[restNum];
+  $('metabLactateLabel').textContent = lactateLabels[restNum];
+  $('metabLactateInput').value = '';
+  $('metabLactateGroup').style.display = 'none';
+
+  let remaining = durationSec;
+  updateRestDisplay(remaining, durationSec, config);
+
+  metabTimer = setInterval(() => {
+    remaining--;
+    updateRestDisplay(remaining, durationSec, config);
+    if (remaining <= 0) {
+      clearInterval(metabTimer);
+      metabTimer = null;
+      // Show lactate input
+      $('metabLactateGroup').style.display = 'block';
+      $('metabLactateInput').focus();
+    }
+  }, 1000);
+}
+
+function updateRestDisplay(remaining, totalSec, config) {
+  const mins = Math.floor(remaining / 60);
+  const secs = remaining % 60;
+  $('metabRestTimer').textContent = mins + ':' + secs.toString().padStart(2, '0');
+  $('metabRestLabel').textContent = (totalSec === 6 * 60 ? 'Rest 1' : 'Rest 2') + ' — ' + mins + ':' + secs.toString().padStart(2, '0');
+
+  const zone = $('metabRestZone');
+  const instr = $('metabRestInstruction');
+
+  if (config.allSit) {
+    zone.className = 'metab-rest-zone sit';
+    instr.className = 'metab-rest-sit';
+    instr.textContent = 'Sit still — do not move';
+  } else {
+    // Rest 2: red 0-5min, green 5-14min, red 14-15min
+    const elapsed = totalSec - remaining;
+    if (elapsed < 5 * 60) {
+      zone.className = 'metab-rest-zone sit';
+      instr.className = 'metab-rest-sit';
+      instr.textContent = 'Sit still — do not move';
+    } else if (elapsed < 14 * 60) {
+      zone.className = 'metab-rest-zone flush';
+      instr.className = 'metab-rest-flush';
+      instr.textContent = 'Active flush — pedal gently';
+    } else {
+      zone.className = 'metab-rest-zone sit';
+      instr.className = 'metab-rest-sit';
+      instr.textContent = 'Sit still — final minute';
+    }
+  }
+}
+
+// ── Data Capture Hook ──────────────────────────────────
+// Add a second BLE listener for metabolic sprint data capture.
+let metabBleChar = null;
+
+function metabCaptureListener(event) {
+  if (metabActiveSprintNum <= 0) return;
+
+  const dv = event.target.value;
+  let parsed;
+  if (bikeModel.value === 'airrunner') {
+    parsed = parseWahooTreadmill(dv);
+  } else if (getDeviceType() === 'treadmill') {
+    parsed = parseTreadmill(dv);
+  } else {
+    parsed = parseFTMS(dv);
+  }
+
+  if (parsed.instantPower != null) {
+    const elapsedMs = Date.now() - metabSprintStart;
+    const sample = { elapsedMs: elapsedMs, watts: parsed.instantPower };
+
+    if (metabActiveSprintNum === 1) sprint1Data.push(sample);
+    else if (metabActiveSprintNum === 2) sprint2Data.push(sample);
+    else sprint3Data.push(sample);
+
+    $('metabLivePower').textContent = parsed.instantPower + ' W';
+    const arr = metabActiveSprintNum === 1 ? sprint1Data : metabActiveSprintNum === 2 ? sprint2Data : sprint3Data;
+    $('metabSprintSamples').textContent = arr.length + ' sample' + (arr.length !== 1 ? 's' : '');
+  }
+}
+
+// Attach metabolic listener on BLE connect; handle disconnect during sprint
+const _origSetState2 = setState;
+setState = function(newState) {
+  // Handle disconnect during metabolic sprint BEFORE state change
+  if (newState === State.IDLE && metabActiveSprintNum > 0) {
+    if (metabTimer) { clearInterval(metabTimer); metabTimer = null; }
+    metabActiveSprintNum = 0;
+    metabBleChar = null;
+    log('BLE disconnected during metabolic sprint — partial data preserved');
+    setStatus('BLE lost during sprint. Reconnect to continue or view partial data.', 'warning');
+  }
+
+  _origSetState2(newState);
+
+  // When BLE connects, attach metabolic listener to the characteristic
+  if (newState === State.CONNECTED && bleCharacteristic && metabModeSelect.value === 'metabolic') {
+    if (metabBleChar !== bleCharacteristic) {
+      if (metabBleChar) {
+        try { metabBleChar.removeEventListener('characteristicvaluechanged', metabCaptureListener); } catch(e) {}
+      }
+      bleCharacteristic.addEventListener('characteristicvaluechanged', metabCaptureListener);
+      metabBleChar = bleCharacteristic;
+      log('Metabolic capture listener attached');
+    }
+  }
+};
+
+// ── Calculations ───────────────────────────────────────
+const BETA = 63;  // J/kg/mM (metabolic energy equivalent of lactate)
+const ETA = 0.25; // gross mechanical efficiency (metabolic → mechanical)
+const TAU = 15;   // min (lactate half-life)
+
+function sumWatts(data, fromSec, toSec, trimSec) {
+  trimSec = trimSec || 0;
+  const fromMs = fromSec * 1000;
+  const toMs = toSec * 1000;
+  const trimMs = trimSec * 1000;
+
+  // Filter samples in the target window, applying trim
+  const filtered = data.filter(s => s.elapsedMs >= fromMs + trimMs && s.elapsedMs < toMs);
+  if (filtered.length === 0) return 0;
+
+  // Sum watts — each sample represents ~1s of work (1W * 1s = 1J)
+  // More accurately: integrate by time intervals
+  let totalJ = 0;
+  for (let i = 0; i < filtered.length; i++) {
+    let dt;
+    if (i === 0) {
+      // Time from start of window to first sample, or half interval
+      dt = filtered.length > 1 ? (filtered[1].elapsedMs - filtered[0].elapsedMs) / 1000 : 1;
+    } else {
+      dt = (filtered[i].elapsedMs - filtered[i - 1].elapsedMs) / 1000;
+    }
+    // Clamp dt to reasonable range (0.1s to 3s) to handle timing jitter
+    dt = Math.max(0.1, Math.min(3, dt));
+    totalJ += filtered[i].watts * dt;
+  }
+  return totalJ;
+}
+
+function calculateMetabolicProfile() {
+  const trim1 = parseFloat($('metabTrim1').value) || 0;
+  const trim2 = parseFloat($('metabTrim2').value) || 0;
+  const trim3 = parseFloat($('metabTrim3').value) || 0;
+
+  const mass = metabWeight;
+  const baseline = metabRestingLa;
+
+  // Baseline corrections for lactate stacking
+  const laBase2 = metabLaPeak1 * Math.pow(0.5, 3 / TAU);    // ~0.871 * LaPeak1 (3 min passed: 6min rest - but spec says use actual formula)
+  const laBase3 = metabLaPeak2 * Math.pow(0.5, 12 / TAU);   // ~0.574 * LaPeak2
+
+  // Segment-aligned mechanical work
+  let mechJ_1, mechJ_2, mechJ_3;
+  if (metabManualMode) {
+    mechJ_1 = metabManualMechJ[0];
+    mechJ_2 = metabManualMechJ[1];
+    mechJ_3 = metabManualMechJ[2];
+  } else {
+    mechJ_1 = sumWatts(sprint1Data, 0, 10, trim1);
+    mechJ_2 = sumWatts(sprint2Data, 10, 20, trim2);
+    mechJ_3 = sumWatts(sprint3Data, 20, 30, trim3);
+  }
+
+  // Delta lactates
+  const dLa1 = metabLaPeak1 - baseline;
+  const dLa2 = metabLaPeak2 - laBase2;
+  const dLa3 = metabLaPeak3 - laBase3;
+
+  // Results
+  const alacticCapacity = mechJ_1 - dLa1 * mass * BETA * ETA;
+  const maxGlycolyticPower = mechJ_2 > 0 ? (dLa2 * mass * BETA * ETA) / 10 : null;
+  const anaerobicCost = mechJ_2 > 0 ? (dLa2 * mass * BETA * ETA) / mechJ_2 : null;
+  const fatigueSlopeVal = mechJ_3 > 0 ? (dLa3 * mass * BETA * ETA) / 10 : null;
+
+  // Check for warnings
+  let warnings = [];
+  if (dLa1 < 0) warnings.push('Negative delta lactate for Sprint 1 (La_Peak1 < baseline) — physiologically implausible.');
+  if (dLa2 < 0) warnings.push('Negative delta lactate for Sprint 2 (La_Peak2 < baseline2).');
+  if (dLa3 < 0) warnings.push('Negative delta lactate for Sprint 3 (La_Peak3 < baseline3).');
+  if (!metabManualMode) {
+    if (sprint1Data.length === 0) warnings.push('No data captured for Sprint 1.');
+    if (sprint2Data.length === 0) warnings.push('No data captured for Sprint 2.');
+    if (sprint3Data.length === 0) warnings.push('No data captured for Sprint 3.');
+  }
+
+  // Display warnings
+  const warnEl = $('metabWarnings');
+  warnEl.innerHTML = warnings.map(w => '<div class="metab-warn">' + w + '</div>').join('');
+
+  // Build results table
+  const tbody = $('metabResultsBody');
+  tbody.innerHTML = '';
+
+  function addRow(label, value) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + label + '</td><td>' + value + '</td>';
+    tbody.appendChild(tr);
+  }
+
+  addRow('Weight', mass.toFixed(1) + ' kg');
+  addRow('Resting Lactate', baseline.toFixed(1) + ' mM');
+  addRow('La Peak 1', metabLaPeak1 != null ? metabLaPeak1.toFixed(1) + ' mM' : 'N/A');
+  addRow('La Peak 2', metabLaPeak2 != null ? metabLaPeak2.toFixed(1) + ' mM' : 'N/A');
+  addRow('La Peak 3', metabLaPeak3 != null ? metabLaPeak3.toFixed(1) + ' mM' : 'N/A');
+  addRow('Baseline 2 (corrected)', laBase2.toFixed(2) + ' mM');
+  addRow('Baseline 3 (corrected)', laBase3.toFixed(2) + ' mM');
+  addRow('Mech. Work Sprint 1 (0-10s)', mechJ_1.toFixed(0) + ' J');
+  addRow('Mech. Work Sprint 2 (10-20s)', mechJ_2.toFixed(0) + ' J');
+  addRow('Mech. Work Sprint 3 (20-30s)', mechJ_3.toFixed(0) + ' J');
+  addRow('Alactic Capacity', alacticCapacity.toFixed(0) + ' J');
+  addRow('Max Glycolytic Power', maxGlycolyticPower != null ? maxGlycolyticPower.toFixed(1) + ' W' : 'N/A');
+  addRow('Anaerobic Cost (glycolytic/mech)', anaerobicCost != null ? anaerobicCost.toFixed(2) : 'N/A');
+  addRow('Fatigue Slope', fatigueSlopeVal != null ? fatigueSlopeVal.toFixed(1) + ' W' : 'N/A');
+  if (metabManualMode) {
+    addRow('Sprint 1 Avg Power', (metabManualMechJ[0] / 10).toFixed(0) + ' W (manual)');
+    addRow('Sprint 2 Avg Power', (metabManualMechJ[1] / 10).toFixed(0) + ' W (manual)');
+    addRow('Sprint 3 Avg Power', (metabManualMechJ[2] / 10).toFixed(0) + ' W (manual)');
+  } else {
+    addRow('Sprint 1 samples', sprint1Data.length.toString());
+    addRow('Sprint 2 samples', sprint2Data.length.toString());
+    addRow('Sprint 3 samples', sprint3Data.length.toString());
+  }
+}
+
+// ── Results Figures (3 charts) ─────────────────────────
+function renderMetabFigures() {
+  if (typeof Chart === 'undefined') {
+    $('metabFigures').style.display = 'none';
+    return;
+  }
+  $('metabFigures').style.display = '';
+
+  // Destroy previous instances
+  if (metabChartWork) { metabChartWork.destroy(); metabChartWork = null; }
+  if (metabChartEnergy) { metabChartEnergy.destroy(); metabChartEnergy = null; }
+  if (metabChartSummary) { metabChartSummary.destroy(); metabChartSummary = null; }
+
+  // Recompute values (same logic as calculateMetabolicProfile)
+  const trim1 = parseFloat($('metabTrim1').value) || 0;
+  const trim2 = parseFloat($('metabTrim2').value) || 0;
+  const trim3 = parseFloat($('metabTrim3').value) || 0;
+  const mass = metabWeight;
+  const baseline = metabRestingLa;
+
+  const laBase2 = metabLaPeak1 * Math.pow(0.5, 3 / TAU);
+  const laBase3 = metabLaPeak2 * Math.pow(0.5, 12 / TAU);
+
+  let mechJ_1, mechJ_2, mechJ_3;
+  if (metabManualMode) {
+    mechJ_1 = metabManualMechJ[0];
+    mechJ_2 = metabManualMechJ[1];
+    mechJ_3 = metabManualMechJ[2];
+  } else {
+    mechJ_1 = sumWatts(sprint1Data, 0, 10, trim1);
+    mechJ_2 = sumWatts(sprint2Data, 10, 20, trim2);
+    mechJ_3 = sumWatts(sprint3Data, 20, 30, trim3);
+  }
+
+  const dLa1 = metabLaPeak1 - baseline;
+  const dLa2 = metabLaPeak2 - laBase2;
+  const dLa3 = metabLaPeak3 - laBase3;
+
+  const glyco1 = Math.max(0, dLa1 * mass * BETA * ETA);
+  const glyco2 = Math.max(0, dLa2 * mass * BETA * ETA);
+  const glyco3 = Math.max(0, dLa3 * mass * BETA * ETA);
+  const alac1 = Math.max(0, mechJ_1 - glyco1);
+  const alac2 = Math.max(0, mechJ_2 - glyco2);
+  const alac3 = Math.max(0, mechJ_3 - glyco3);
+
+  const alacticCapacity = mechJ_1 - dLa1 * mass * BETA * ETA;
+  const maxGlycolyticPower = mechJ_2 > 0 ? (dLa2 * mass * BETA * ETA) / 10 : 0;
+  const fatigueSlopeVal = mechJ_3 > 0 ? (dLa3 * mass * BETA * ETA) / 10 : 0;
+
+  const darkTheme = {
+    tickColor: '#2074AA', gridColor: '#2D5585', legendColor: '#FFFFFF', titleColor: '#7BA4C7'
+  };
+
+  // ── Chart 1: Mechanical Work by Sprint ──
+  metabChartWork = new Chart($('metabChartWork').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: ['Sprint 1 (0-10s)', 'Sprint 2 (10-20s)', 'Sprint 3 (20-30s)'],
+      datasets: [{
+        label: 'Mechanical Work (J)',
+        data: [mechJ_1, mechJ_2, mechJ_3],
+        backgroundColor: ['#33CBF4', '#2074AA', '#2D5585'],
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: { display: true, text: 'Mechanical Work by Sprint', color: darkTheme.titleColor },
+        legend: { display: false }
+      },
+      scales: {
+        x: { ticks: { color: darkTheme.tickColor }, grid: { display: false } },
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: 'Joules', color: darkTheme.tickColor },
+          ticks: { color: darkTheme.tickColor },
+          grid: { color: darkTheme.gridColor }
+        }
+      }
+    }
+  });
+
+  // ── Chart 2: Energy System Breakdown (Stacked) ──
+  metabChartEnergy = new Chart($('metabChartEnergy').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: ['Sprint 1 (0-10 s)', 'Sprint 2 (0-20 s)', 'Sprint 3 (0-30 s)'],
+      datasets: [
+        {
+          label: 'Alactic (J)',
+          data: [alac1, alac2, alac3],
+          backgroundColor: '#33CBF4',
+          borderRadius: 4
+        },
+        {
+          label: 'Glycolytic (J)',
+          data: [glyco1, glyco2, glyco3],
+          backgroundColor: '#2074AA',
+          borderRadius: 4
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: { display: true, text: 'Energy System Breakdown', color: darkTheme.titleColor },
+        legend: { labels: { color: darkTheme.legendColor } }
+      },
+      scales: {
+        x: {
+          stacked: true,
+          ticks: { color: darkTheme.tickColor },
+          grid: { display: false }
+        },
+        y: {
+          stacked: true,
+          beginAtZero: true,
+          title: { display: true, text: 'Joules', color: darkTheme.tickColor },
+          ticks: { color: darkTheme.tickColor },
+          grid: { color: darkTheme.gridColor }
+        }
+      }
+    }
+  });
+
+  // ── Chart 3: Anaerobic Glycolytic Profile Summary (Horizontal Bar) ──
+  metabChartSummary = new Chart($('metabChartSummary').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: ['Alactic Capacity (J)', 'Max Glycolytic Power (W)', 'Fatigue Slope (W)'],
+      datasets: [{
+        data: [alacticCapacity, maxGlycolyticPower, fatigueSlopeVal],
+        backgroundColor: ['#33CBF4', '#2074AA', '#2D5585'],
+        borderRadius: 4
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        title: { display: true, text: 'Anaerobic Glycolytic Profile Summary', color: darkTheme.titleColor },
+        legend: { display: false }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: { color: darkTheme.tickColor },
+          grid: { color: darkTheme.gridColor }
+        },
+        y: {
+          ticks: { color: darkTheme.tickColor },
+          grid: { display: false }
+        }
+      }
+    }
+  });
+}
+
+// ── Insights ───────────────────────────────────────────
+function renderMetabInsights() {
+  const container = $('metabInsights');
+  const body = $('metabInsightsBody');
+  if (!container || !body) return;
+
+  const trim1 = parseFloat($('metabTrim1').value) || 0;
+  const trim2 = parseFloat($('metabTrim2').value) || 0;
+  const trim3 = parseFloat($('metabTrim3').value) || 0;
+  const mass = metabWeight;
+  const baseline = metabRestingLa;
+
+  const laBase2 = metabLaPeak1 * Math.pow(0.5, 3 / TAU);
+  const laBase3 = metabLaPeak2 * Math.pow(0.5, 12 / TAU);
+
+  let mechJ_1, mechJ_2, mechJ_3;
+  if (metabManualMode) {
+    mechJ_1 = metabManualMechJ[0];
+    mechJ_2 = metabManualMechJ[1];
+    mechJ_3 = metabManualMechJ[2];
+  } else {
+    mechJ_1 = sumWatts(sprint1Data, 0, 10, trim1);
+    mechJ_2 = sumWatts(sprint2Data, 10, 20, trim2);
+    mechJ_3 = sumWatts(sprint3Data, 20, 30, trim3);
+  }
+
+  const dLa1 = metabLaPeak1 - baseline;
+  const dLa2 = metabLaPeak2 - laBase2;
+  const dLa3 = metabLaPeak3 - laBase3;
+
+  const glyco1 = Math.max(0, dLa1 * mass * BETA * ETA);
+  const glyco2 = Math.max(0, dLa2 * mass * BETA * ETA);
+  const glyco3 = Math.max(0, dLa3 * mass * BETA * ETA);
+  const alac1 = Math.max(0, mechJ_1 - glyco1);
+  const alac2 = Math.max(0, mechJ_2 - glyco2);
+  const alac3 = Math.max(0, mechJ_3 - glyco3);
+
+  const alacticCapacity = mechJ_1 - dLa1 * mass * BETA * ETA;
+  const alacticPerKg = mass > 0 ? alacticCapacity / mass : 0;
+
+  // Power per sprint
+  const avgPow1 = mechJ_1 / 10;
+  const avgPow2 = mechJ_2 / 10;
+  const avgPow3 = mechJ_3 / 10;
+
+  const netLaRise = metabLaPeak3 - baseline;
+
+  const cards = [];
+
+  // 1. Alactic Capacity
+  let alacClass, alacText;
+  if (alacticPerKg < 50) {
+    alacClass = 'Low';
+    alacText = 'Alactic capacity is <strong>low</strong> (' + alacticPerKg.toFixed(1) + ' J/kg). Focus on short, maximal sprints (3-6 s) with full recovery to develop the phosphocreatine system.';
+  } else if (alacticPerKg <= 100) {
+    alacClass = 'Moderate';
+    alacText = 'Alactic capacity is <strong>moderate</strong> (' + alacticPerKg.toFixed(1) + ' J/kg). Maintain with regular sprint work and consider creatine supplementation if appropriate.';
+  } else {
+    alacClass = 'High';
+    alacText = 'Alactic capacity is <strong>high</strong> (' + alacticPerKg.toFixed(1) + ' J/kg). This indicates a well-developed phosphocreatine system — a strong foundation for explosive efforts.';
+  }
+  cards.push({ tag: 'Alactic Capacity', cls: 'alactic', text: alacText });
+
+  // 2. Glycolytic Trend
+  const glycoTrend = glyco3 > glyco2 && glyco2 > glyco1;
+  const glycoText = glycoTrend
+    ? 'Glycolytic energy contribution <strong>rises progressively</strong> across sprints (' + glyco1.toFixed(0) + ' → ' + glyco2.toFixed(0) + ' → ' + glyco3.toFixed(0) + ' J), indicating increasing glycolytic engagement as sprint duration extends.'
+    : 'Glycolytic contribution does not follow a strictly progressive pattern (' + glyco1.toFixed(0) + ' / ' + glyco2.toFixed(0) + ' / ' + glyco3.toFixed(0) + ' J). Consider whether lactate sampling timing or sprint pacing may have influenced results.';
+  cards.push({ tag: 'Glycolytic Trend', cls: 'glycolytic', text: glycoText });
+
+  // 3. Fatigue Pattern
+  const peakPow = Math.max(avgPow1, avgPow2, avgPow3);
+  const minPow = Math.min(avgPow1, avgPow2, avgPow3);
+  const declinePct = peakPow > 0 ? ((peakPow - minPow) / peakPow) * 100 : 0;
+  let fatigueText;
+  if (declinePct > 20) {
+    fatigueText = 'Power declines by <strong>' + declinePct.toFixed(0) + '%</strong> across sprints — a <strong>significant</strong> drop. This suggests limited fatigue resistance. Incorporate repeated sprint training (e.g., 6-10 x 6 s with 30 s rest) to improve buffering capacity.';
+  } else if (declinePct > 10) {
+    fatigueText = 'Power declines by <strong>' + declinePct.toFixed(0) + '%</strong> across sprints — a <strong>moderate</strong> level. Work-to-rest ratio sessions (e.g., 10 s on / 50 s off) can help maintain output across repeated efforts.';
+  } else {
+    fatigueText = 'Power declines by only <strong>' + declinePct.toFixed(0) + '%</strong> across sprints — <strong>good fatigue resistance</strong>. The athlete maintains output well under accumulating metabolic stress.';
+  }
+  cards.push({ tag: 'Fatigue Pattern', cls: 'fatigue', text: fatigueText });
+
+  // 4. Energy System Dominance
+  function pctStr(a, g) { const t = a + g; return t > 0 ? (a / t * 100).toFixed(0) + '% alactic / ' + (g / t * 100).toFixed(0) + '% glycolytic' : 'N/A'; }
+  const domText = 'Sprint 1: <strong>' + pctStr(alac1, glyco1) + '</strong>. Sprint 2: <strong>' + pctStr(alac2, glyco2) + '</strong>. Sprint 3: <strong>' + pctStr(alac3, glyco3) + '</strong>. A shift towards glycolytic dominance in longer sprints is expected.';
+  cards.push({ tag: 'Energy System Dominance', cls: 'dominance', text: domText });
+
+  // 5. Lactate Response
+  let lacText;
+  if (netLaRise > 12) {
+    lacText = 'Net lactate rise is <strong>steep</strong> (+' + netLaRise.toFixed(1) + ' mM from baseline). High glycolytic flux indicates strong anaerobic glycolytic capacity but also a high metabolic cost. Recovery strategies and buffering training are advisable.';
+  } else if (netLaRise > 6) {
+    lacText = 'Net lactate rise is <strong>moderate</strong> (+' + netLaRise.toFixed(1) + ' mM). This reflects a balanced glycolytic response typical of well-conditioned athletes.';
+  } else {
+    lacText = 'Net lactate rise is <strong>low</strong> (+' + netLaRise.toFixed(1) + ' mM). This may indicate limited glycolytic engagement — consider whether sprint effort was truly maximal or if the athlete has low glycolytic enzyme capacity.';
+  }
+  cards.push({ tag: 'Lactate Response', cls: 'lactate', text: lacText });
+
+  // 6. Training Recommendations
+  let trainText = '';
+  if (alacticPerKg < 50 && declinePct > 20) {
+    trainText = 'Priority: develop alactic power (short max sprints, 3-6 s, full recovery) and fatigue resistance (repeated sprints with short rest). Consider a two-block periodisation approach.';
+  } else if (alacticPerKg < 50) {
+    trainText = 'Priority: develop alactic capacity with short, maximal sprints (3-6 s) and full recovery (2-3 min). Fatigue resistance is adequate — maintain with sport-specific conditioning.';
+  } else if (declinePct > 20) {
+    trainText = 'Alactic base is solid. Priority: improve repeated sprint ability and glycolytic buffering. Use 6-10 s sprints with reducing rest intervals (e.g., 60→30 s) across sets.';
+  } else if (netLaRise > 12) {
+    trainText = 'Strong overall profile. Focus on lactate tolerance and clearance — tempo intervals and active recovery protocols will help manage the high glycolytic flux during competition.';
+  } else {
+    trainText = 'Well-balanced anaerobic profile. Maintain with mixed sprint training and periodically retest to track adaptations. Consider sport-specific application of findings.';
+  }
+  cards.push({ tag: 'Training Recommendations', cls: 'training', text: trainText });
+
+  body.innerHTML = cards.map(c =>
+    '<div class="metab-insight-card ' + c.cls + '">' +
+      '<div class="metab-insight-tag ' + c.cls + '">' + c.tag + '</div>' +
+      '<div class="metab-insight-text">' + c.text + '</div>' +
+    '</div>'
+  ).join('');
+  container.style.display = '';
+}
+
+// ── Chart.js Overlay ───────────────────────────────────
+function renderMetabChart() {
+  if (typeof Chart === 'undefined') {
+    $('metabChartContainer').style.display = 'none';
+    log('Chart.js not available — skipping chart');
+    return;
+  }
+  $('metabChartContainer').style.display = 'block';
+
+  if (metabChartInstance) {
+    metabChartInstance.destroy();
+    metabChartInstance = null;
+  }
+
+  const trim1 = parseFloat($('metabTrim1').value) || 0;
+  const trim2 = parseFloat($('metabTrim2').value) || 0;
+  const trim3 = parseFloat($('metabTrim3').value) || 0;
+
+  function toChartData(data, trimSec) {
+    return data
+      .filter(s => s.elapsedMs >= trimSec * 1000)
+      .map(s => ({ x: s.elapsedMs / 1000, y: s.watts }));
+  }
+
+  const datasets = [];
+  if (sprint1Data.length > 0) {
+    datasets.push({
+      label: 'Sprint 1 (10s)',
+      data: toChartData(sprint1Data, trim1),
+      borderColor: '#33CBF4',
+      backgroundColor: 'rgba(51,203,244,0.1)',
+      pointRadius: 2, borderWidth: 2, tension: 0.2
+    });
+  }
+  if (sprint2Data.length > 0) {
+    datasets.push({
+      label: 'Sprint 2 (20s)',
+      data: toChartData(sprint2Data, trim2),
+      borderColor: '#2074AA',
+      backgroundColor: 'rgba(32,116,170,0.1)',
+      pointRadius: 2, borderWidth: 2, tension: 0.2
+    });
+  }
+  if (sprint3Data.length > 0) {
+    datasets.push({
+      label: 'Sprint 3 (30s)',
+      data: toChartData(sprint3Data, trim3),
+      borderColor: '#2D5585',
+      backgroundColor: 'rgba(45,85,133,0.1)',
+      pointRadius: 2, borderWidth: 2, tension: 0.2
+    });
+  }
+
+  if (datasets.length === 0) return;
+
+  const ctx = $('metabChart').getContext('2d');
+  metabChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: { datasets: datasets },
+    options: {
+      responsive: true,
+      scales: {
+        x: {
+          type: 'linear', min: 0, max: 30,
+          title: { display: true, text: 'Time (s)', color: '#2074AA' },
+          ticks: { color: '#2074AA' },
+          grid: { color: '#2D5585' }
+        },
+        y: {
+          title: { display: true, text: 'Power (W)', color: '#2074AA' },
+          ticks: { color: '#2074AA' },
+          grid: { color: '#2D5585' },
+          beginAtZero: true
+        }
+      },
+      plugins: {
+        legend: { labels: { color: '#FFFFFF' } }
+      }
+    }
+  });
+}
+
+// ── CSV Export (Metabolic) ─────────────────────────────
+function downloadMetabCSV() {
+  const mass = metabWeight;
+  const baseline = metabRestingLa;
+  const laBase2 = metabLaPeak1 != null ? metabLaPeak1 * Math.pow(0.5, 3 / TAU) : 0;
+  const laBase3 = metabLaPeak2 != null ? metabLaPeak2 * Math.pow(0.5, 12 / TAU) : 0;
+
+  const trim1 = parseFloat($('metabTrim1').value) || 0;
+  const trim2 = parseFloat($('metabTrim2').value) || 0;
+  const trim3 = parseFloat($('metabTrim3').value) || 0;
+
+  let mechJ_1, mechJ_2, mechJ_3;
+  if (metabManualMode) {
+    mechJ_1 = metabManualMechJ[0];
+    mechJ_2 = metabManualMechJ[1];
+    mechJ_3 = metabManualMechJ[2];
+  } else {
+    mechJ_1 = sumWatts(sprint1Data, 0, 10, trim1);
+    mechJ_2 = sumWatts(sprint2Data, 10, 20, trim2);
+    mechJ_3 = sumWatts(sprint3Data, 20, 30, trim3);
+  }
+
+  const dLa1 = metabLaPeak1 != null ? metabLaPeak1 - baseline : 0;
+  const dLa2 = metabLaPeak2 != null ? metabLaPeak2 - laBase2 : 0;
+  const dLa3 = metabLaPeak3 != null ? metabLaPeak3 - laBase3 : 0;
+
+  const alacticCapacity = mechJ_1 - dLa1 * mass * BETA * ETA;
+  const maxGlycolyticPower = mechJ_2 > 0 ? (dLa2 * mass * BETA * ETA) / 10 : 0;
+  const anaerobicCost = mechJ_2 > 0 ? (dLa2 * mass * BETA * ETA) / mechJ_2 : 0;
+  const fatigueSlopeVal = mechJ_3 > 0 ? (dLa3 * mass * BETA * ETA) / 10 : 0;
+
+  let csv = '=== ANAEROBIC GLYCOLYTIC PROFILING REPORT ===\n';
+  csv += 'Date,' + new Date().toISOString() + '\n';
+  csv += 'Data_Source,' + (metabManualMode ? 'Manual' : 'BLE') + '\n';
+  csv += 'Weight_kg,' + mass + '\n';
+  csv += 'Resting_La_mM,' + baseline + '\n';
+  csv += 'La_Peak1_mM,' + (metabLaPeak1 != null ? metabLaPeak1 : '') + '\n';
+  csv += 'La_Peak2_mM,' + (metabLaPeak2 != null ? metabLaPeak2 : '') + '\n';
+  csv += 'La_Peak3_mM,' + (metabLaPeak3 != null ? metabLaPeak3 : '') + '\n';
+  csv += 'Baseline2_corrected_mM,' + laBase2.toFixed(3) + '\n';
+  csv += 'Baseline3_corrected_mM,' + laBase3.toFixed(3) + '\n';
+  csv += 'Trim1_s,' + trim1 + '\n';
+  csv += 'Trim2_s,' + trim2 + '\n';
+  csv += 'Trim3_s,' + trim3 + '\n';
+  csv += 'MechWork_Sprint1_J,' + mechJ_1.toFixed(1) + '\n';
+  csv += 'MechWork_Sprint2_J,' + mechJ_2.toFixed(1) + '\n';
+  csv += 'MechWork_Sprint3_J,' + mechJ_3.toFixed(1) + '\n';
+  csv += 'Alactic_Capacity_J,' + alacticCapacity.toFixed(1) + '\n';
+  csv += 'Max_Glycolytic_Power_W,' + maxGlycolyticPower.toFixed(1) + '\n';
+  csv += 'Anaerobic_Cost,' + anaerobicCost.toFixed(3) + '\n';
+  csv += 'Fatigue_Slope_W,' + fatigueSlopeVal.toFixed(1) + '\n';
+  csv += '\n';
+
+  if (metabManualMode) {
+    csv += 'Sprint1_Avg_Power_W,' + (metabManualMechJ[0] / 10).toFixed(0) + '\n';
+    csv += 'Sprint2_Avg_Power_W,' + (metabManualMechJ[1] / 10).toFixed(0) + '\n';
+    csv += 'Sprint3_Avg_Power_W,' + (metabManualMechJ[2] / 10).toFixed(0) + '\n';
+    csv += '\n';
+  } else {
+    // Raw sprint data
+    function appendSprint(label, data) {
+      csv += '=== ' + label + ' ===\n';
+      csv += 'elapsed_ms,watts\n';
+      data.forEach(s => { csv += s.elapsedMs + ',' + s.watts + '\n'; });
+      csv += '\n';
+    }
+
+    appendSprint('SPRINT 1 RAW DATA', sprint1Data);
+    appendSprint('SPRINT 2 RAW DATA', sprint2Data);
+    appendSprint('SPRINT 3 RAW DATA', sprint3Data);
+  }
+
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const now = new Date();
+  const ts = now.toISOString().replace(/:/g, '-').replace(/\.\d+Z$/, '');
+  const filename = 'anaerobic-glycolytic-profile-' + ts + '.csv';
+
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+  log('Anaerobic glycolytic profile CSV downloaded: ' + filename);
+}
+
+// ── Reset Protocol ─────────────────────────────────────
+function resetMetabProtocol() {
+  if (metabTimer) { clearInterval(metabTimer); metabTimer = null; }
+  metabActiveSprintNum = 0;
+  sprint1Data = [];
+  sprint2Data = [];
+  sprint3Data = [];
+  metabLaPeak1 = null;
+  metabLaPeak2 = null;
+  metabLaPeak3 = null;
+  metabManualMode = false;
+  metabManualMechJ = [0, 0, 0];
+  if (metabChartInstance) { metabChartInstance.destroy(); metabChartInstance = null; }
+  if (metabChartWork) { metabChartWork.destroy(); metabChartWork = null; }
+  if (metabChartEnergy) { metabChartEnergy.destroy(); metabChartEnergy = null; }
+  if (metabChartSummary) { metabChartSummary.destroy(); metabChartSummary = null; }
+  const insightsEl = $('metabInsights');
+  if (insightsEl) { insightsEl.style.display = 'none'; $('metabInsightsBody').innerHTML = ''; }
+  releaseWakeLock();
+  log('Metabolic protocol reset');
+}
+
+// ── Lactate Validation ─────────────────────────────────
+function validateLactate(val) {
+  const v = parseFloat(val);
+  if (isNaN(v) || v < 0 || v > 30) return null;
+  return v;
+}
+
+// ── Event Listeners (Metabolic) ────────────────────────
+btnMetabBegin.addEventListener('click', () => {
+  const w = parseFloat($('metabWeight').value);
+  if (isNaN(w) || w < 30 || w > 250) {
+    setStatus('Weight must be 30-250 kg.', 'error');
+    return;
+  }
+  const la = parseFloat($('metabRestingLa').value);
+  if (isNaN(la) || la < 0 || la > 10) {
+    setStatus('Resting lactate must be 0-10 mM.', 'error');
+    return;
+  }
+  metabWeight = w;
+  metabRestingLa = la;
+  metabManualMode = document.querySelector('input[name="metabDataSource"]:checked').value === 'manual';
+  setMetabState(MetabState.WARMUP);
+});
+
+btnMetabStart.addEventListener('click', () => {
+  if (!metabManualMode) {
+    if (state !== State.CONNECTED && state !== State.RECORDED) {
+      setStatus('Connect to bike first.', 'error');
+      return;
+    }
+    // Ensure metabolic listener is attached
+    if (bleCharacteristic && metabBleChar !== bleCharacteristic) {
+      if (metabBleChar) {
+        try { metabBleChar.removeEventListener('characteristicvaluechanged', metabCaptureListener); } catch(e) {}
+      }
+      bleCharacteristic.addEventListener('characteristicvaluechanged', metabCaptureListener);
+      metabBleChar = bleCharacteristic;
+      log('Metabolic capture listener attached (on start)');
+    }
+    setMetabState(MetabState.COUNTDOWN_1);
+  } else {
+    setMetabState(MetabState.SPRINT_ENTRY);
+  }
+});
+
+btnMetabLactateSubmit.addEventListener('click', () => {
+  const val = validateLactate($('metabLactateInput').value);
+  if (val === null) {
+    setStatus('Lactate must be 0-30 mM.', 'error');
+    return;
+  }
+
+  if (metabState === MetabState.REST_1) {
+    metabLaPeak1 = val;
+    log('La Peak 1 = ' + val + ' mM');
+    setMetabState(MetabState.COUNTDOWN_2);
+  } else if (metabState === MetabState.REST_2) {
+    metabLaPeak2 = val;
+    log('La Peak 2 = ' + val + ' mM');
+    setMetabState(MetabState.COUNTDOWN_3);
+  }
+});
+
+btnMetabCalc.addEventListener('click', () => {
+  const val = validateLactate($('metabLaPeak3').value);
+  if (val === null) {
+    setStatus('Lactate must be 0-30 mM.', 'error');
+    return;
+  }
+  metabLaPeak3 = val;
+  log('La Peak 3 = ' + val + ' mM');
+  setMetabState(MetabState.RESULTS);
+});
+
+$('btnMetabPowerSubmit').addEventListener('click', () => {
+  const powers = [
+    parseFloat($('metabPower1').value),
+    parseFloat($('metabPower2').value),
+    parseFloat($('metabPower3').value)
+  ];
+  for (let i = 0; i < 3; i++) {
+    if (isNaN(powers[i]) || powers[i] < 0 || powers[i] > 3000) {
+      setStatus('Sprint ' + (i + 1) + ' power must be 0-3000 W.', 'error');
+      return;
+    }
+  }
+  const lactates = [
+    validateLactate($('metabLaManual1').value),
+    validateLactate($('metabLaManual2').value),
+    validateLactate($('metabLaManual3').value)
+  ];
+  for (let i = 0; i < 3; i++) {
+    if (lactates[i] === null) {
+      setStatus('La Peak ' + (i + 1) + ' must be 0-30 mM.', 'error');
+      return;
+    }
+  }
+
+  metabManualMechJ = [powers[0] * 10, powers[1] * 10, powers[2] * 10];
+  metabLaPeak1 = lactates[0];
+  metabLaPeak2 = lactates[1];
+  metabLaPeak3 = lactates[2];
+  log('Manual entry: ' + powers.map((p, i) => 'S' + (i+1) + '=' + p + 'W').join(', '));
+  log('Manual entry: ' + lactates.map((l, i) => 'La' + (i+1) + '=' + l + 'mM').join(', '));
+  setMetabState(MetabState.RESULTS);
+});
+
+btnMetabRecalc.addEventListener('click', () => {
+  calculateMetabolicProfile();
+  renderMetabFigures();
+  renderMetabInsights();
+  renderMetabChart();
+  log('Metabolic results recalculated with trims');
+});
+
+btnMetabExportCSV.addEventListener('click', downloadMetabCSV);
+
+btnMetabReset.addEventListener('click', () => {
+  if (!confirm('Reset the entire anaerobic protocol? All data will be lost.')) return;
+  resetMetabProtocol();
+  setMetabState(MetabState.SETUP);
+});
+
+log('Metabolic profiling module loaded');
+</script>
+</body>
+</html>
